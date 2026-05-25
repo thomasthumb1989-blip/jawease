@@ -1,0 +1,45 @@
+export const Strings = {
+  app: {
+    name: 'JawEase',
+    tagline: 'Relief starts here',
+  },
+  tabs: {
+    today: 'Today',
+    exercises: 'Exercises',
+    progress: 'Progress',
+    settings: 'Settings',
+  },
+  onboarding: {
+    welcome: 'Welcome to JawEase',
+    symptomsTitle: 'What symptoms do you experience?',
+    baselineTitle: 'How is your jaw feeling right now?',
+    reminderTitle: 'Set your daily reminder',
+    emailTitle: 'Stay on track',
+    paywallTitle: 'Unlock your full recovery plan',
+  },
+  symptoms: {
+    jaw_pain: 'Jaw Pain',
+    jaw_clicking: 'Jaw Clicking',
+    teeth_grinding: 'Teeth Grinding',
+    headaches: 'Headaches',
+    neck_tension: 'Neck Tension',
+    ear_pain: 'Ear Pain',
+    jaw_locking: 'Jaw Locking',
+    facial_pain: 'Facial Pain',
+  },
+  triggers: {
+    stress: 'Stress',
+    poor_sleep: 'Poor Sleep',
+    food: 'Hard/Chewy Food',
+    weather: 'Weather Change',
+    caffeine: 'Caffeine',
+    alcohol: 'Alcohol',
+  },
+  painLevels: {
+    none: 'No pain',
+    mild: 'Mild',
+    moderate: 'Moderate',
+    severe: 'Severe',
+    extreme: 'Extreme',
+  },
+} as const;
