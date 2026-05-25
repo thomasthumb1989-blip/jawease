@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '@/src/constants/colors';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { useTheme } from '@/src/hooks/useTheme';
 import { Button } from './Button';
 
 interface EmptyStateProps {
@@ -8,6 +13,7 @@ interface EmptyStateProps {
   message: string;
   actionTitle?: string;
   onAction?: () => void;
+  illustration?: React.ReactNode;
 }
 
 export function EmptyState({
@@ -15,15 +21,32 @@ export function EmptyState({
   message,
   actionTitle,
   onAction,
+  illustration,
 }: EmptyStateProps) {
+  const theme = useTheme();
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 400 });
+  }, [opacity]);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+    <Animated.View style={[styles.container, fadeStyle]}>
+      {illustration && <View style={styles.illustration}>{illustration}</View>}
+      <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+      <Text style={[styles.message, { color: theme.textMuted }]}>
+        {message}
+      </Text>
       {actionTitle && onAction && (
-        <Button title={actionTitle} onPress={onAction} size="sm" />
+        <View style={styles.buttonWrapper}>
+          <Button title={actionTitle} onPress={onAction} size="sm" />
+        </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -35,16 +58,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 12,
   },
+  illustration: { marginBottom: 8 },
   title: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.light.text,
     textAlign: 'center',
   },
   message: {
     fontSize: 16,
-    color: Colors.light.textMuted,
     textAlign: 'center',
     lineHeight: 24,
   },
+  buttonWrapper: { marginTop: 8 },
 });
+
+export default EmptyState;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, StyleSheet, TextStyle } from 'react-native';
-import { Colors } from '@/src/constants/colors';
+import { useTheme } from '@/src/hooks/useTheme';
 
 interface BodyTextProps {
   children: React.ReactNode;
@@ -13,14 +13,23 @@ export function BodyText({
   variant = 'primary',
   style,
 }: BodyTextProps) {
+  const theme = useTheme();
+
+  const colorMap = {
+    primary: theme.text,
+    secondary: theme.textSecondary,
+    muted: theme.textMuted,
+  };
+
   return (
-    <Text style={[styles.base, styles[variant], style]}>{children}</Text>
+    <Text style={[styles.base, { color: colorMap[variant] }, style]}>
+      {children}
+    </Text>
   );
 }
 
 const styles = StyleSheet.create({
   base: { fontSize: 16, lineHeight: 24 },
-  primary: { color: Colors.light.text },
-  secondary: { color: Colors.light.textSecondary },
-  muted: { color: Colors.light.textMuted },
 });
+
+export default BodyText;

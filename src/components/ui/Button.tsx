@@ -1,23 +1,27 @@
-import React from 'react';
-import {
-  Pressable,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-  ActivityIndicator,
-} from 'react-native';
-import { Colors } from '@/src/constants/colors';
+import React, { useCallback } from 'react';
+import { Text, Pressable, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { useTheme } from '@/src/hooks/useTheme';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'accent';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
 }
+
+const SIZE_MAP = { sm: 40, md: 48, lg: 56 } as const;
+const FONT_MAP = { sm: 14, md: 16, lg: 18 } as const;
+const PH_MAP = { sm: 16, md: 24, lg: 32 } as const;
 
 export function Button({
   title,
@@ -28,65 +32,111 @@ export function Button({
   loading = false,
   style,
 }: ButtonProps) {
-  const buttonStyles: ViewStyle[] = [
-    styles.base,
-    styles[`size_${size}`],
-    styles[`variant_${variant}`],
-    disabled && styles.disabled,
-    style,
-  ].filter(Boolean) as ViewStyle[];
+  const theme = useTheme();
+  const scale = useSharedValue(1);
 
-  const textStyles: TextStyle[] = [
-    styles.text,
-    styles[`text_${size}`],
-    styles[`textVariant_${variant}`],
-    disabled && styles.textDisabled,
-  ].filter(Boolean) as TextStyle[];
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = useCallback(() => {
+    scale.value = withSpring(0.96, { damping: 15, stiffness: 200 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 200 });
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    if (disabled || loading) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  }, [disabled, loading, onPress]);
+
+  const height = SIZE_MAP[size];
+  const fontSize = FONT_MAP[size];
+  const paddingHorizontal = PH_MAP[size];
+
+  const isGradient = variant === 'primary' || variant === 'accent';
+
+  const containerStyle: ViewStyle = {
+    height,
+    paddingHorizontal,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    ...(variant === 'secondary' && {
+      borderWidth: 1.5,
+      borderColor: theme.primary,
+      backgroundColor: 'transparent',
+    }),
+    ...(variant === 'ghost' && {
+      backgroundColor: 'transparent',
+    }),
+    ...(disabled && { opacity: 0.5 }),
+  };
+
+  const textColor =
+    variant === 'primary' || variant === 'accent'
+      ? '#FFFFFF'
+      : theme.primary;
+
+  const gradientColors: [string, string] =
+    variant === 'accent'
+      ? [theme.accent, theme.accentGlow]
+      : [theme.primary, theme.primaryLight];
+
+  const content = loading ? (
+    <ActivityIndicator color={textColor} />
+  ) : (
+    <Text style={[styles.text, { fontSize, color: textColor }]}>{title}</Text>
+  );
 
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
-        ...buttonStyles,
-        pressed && !disabled && styles.pressed,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' ? '#FFFFFF' : Colors.light.primary}
-        />
-      ) : (
-        <Text style={textStyles}>{title}</Text>
-      )}
-    </Pressable>
+    <Animated.View style={[animatedStyle, style]}>
+      <Animated.View>
+        {isGradient ? (
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={[containerStyle]}
+          >
+            <Pressable
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+              onPress={handlePress}
+              disabled={disabled || loading}
+              style={styles.pressable}
+            >
+              {content}
+            </Pressable>
+          </LinearGradient>
+        ) : (
+          <Pressable
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={handlePress}
+            disabled={disabled || loading}
+            style={[containerStyle, styles.pressable]}
+          >
+            {content}
+          </Pressable>
+        )}
+      </Animated.View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
+  text: { fontWeight: '600' },
+  pressable: {
+    flex: 1,
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
   },
-  size_sm: { paddingVertical: 8, paddingHorizontal: 16 },
-  size_md: { paddingVertical: 14, paddingHorizontal: 24 },
-  size_lg: { paddingVertical: 18, paddingHorizontal: 32 },
-  variant_primary: { backgroundColor: Colors.light.primary },
-  variant_secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: Colors.light.primary,
-  },
-  variant_ghost: { backgroundColor: 'transparent' },
-  disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
-  text: { fontWeight: '600' },
-  text_sm: { fontSize: 14 },
-  text_md: { fontSize: 16 },
-  text_lg: { fontSize: 18 },
-  textVariant_primary: { color: '#FFFFFF' },
-  textVariant_secondary: { color: Colors.light.primary },
-  textVariant_ghost: { color: Colors.light.primary },
-  textDisabled: { opacity: 0.7 },
 });
+
+export default Button;

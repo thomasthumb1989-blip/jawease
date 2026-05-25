@@ -11,3 +11,4 @@ export { ExerciseTimer } from './ExerciseTimer';
 export { ProgressRing } from './ProgressRing';
 export { PaywallGate } from './PaywallGate';
 export { GlassCard } from './GlassCard';
+export { TabBar } from './TabBar';

@@ -24,7 +24,7 @@ export default function BaselineScreen() {
         <View style={styles.content}>
           <Heading level={2}>{Strings.onboarding.baselineTitle}</Heading>
 
-          <PainOrb level={painLevel} size={140} />
+          <PainOrb level={painLevel} size="large" />
 
           <View style={styles.sliderContainer}>
             <Text style={styles.sliderLabel}>Pain Level: {painLevel}</Text>

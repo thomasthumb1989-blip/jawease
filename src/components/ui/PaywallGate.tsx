@@ -1,45 +1,105 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '@/src/constants/colors';
+import { View, StyleSheet, Pressable, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useRouter } from 'expo-router';
+import { useTheme, useColorSchemeValue } from '@/src/hooks/useTheme';
+import { useSubscriptionContext } from '@/src/contexts/SubscriptionContext';
 import { Button } from './Button';
+import { Heading } from './Heading';
+import { BodyText } from './BodyText';
 
 interface PaywallGateProps {
-  feature: string;
-  onUpgrade: () => void;
+  children: React.ReactNode;
+  feature?: string;
 }
 
-export function PaywallGate({ feature, onUpgrade }: PaywallGateProps) {
+export function PaywallGate({ children, feature }: PaywallGateProps) {
+  const theme = useTheme();
+  const scheme = useColorSchemeValue();
+  const { isPremium } = useSubscriptionContext();
+  const router = useRouter();
+
+  if (isPremium) {
+    return <>{children}</>;
+  }
+
+  const handleUnlock = () => {
+    router.push('/onboarding/paywall');
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.lock}>🔒</Text>
-      <Text style={styles.title}>Premium Feature</Text>
-      <Text style={styles.message}>
-        Unlock {feature} with JawEase Premium for your full recovery plan.
-      </Text>
-      <Button title="Upgrade" onPress={onUpgrade} />
+      {/* Render children behind blur */}
+      <View style={styles.content}>{children}</View>
+
+      {/* Blur overlay */}
+      <Pressable style={styles.overlay} onPress={handleUnlock}>
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={25}
+            tint={scheme === 'dark' ? 'dark' : 'light'}
+            style={styles.blur}
+          >
+            <View style={styles.lockContent}>
+              <Heading level={3}>Unlock {feature ?? 'this feature'}</Heading>
+              <BodyText variant="secondary">
+                Upgrade to JawEase Premium for full access.
+              </BodyText>
+              <Button
+                title="Unlock"
+                onPress={handleUnlock}
+                variant="accent"
+                size="md"
+              />
+            </View>
+          </BlurView>
+        ) : (
+          <View
+            style={[
+              styles.blur,
+              { backgroundColor: theme.background + 'E6' },
+            ]}
+          >
+            <View style={styles.lockContent}>
+              <Heading level={3}>Unlock {feature ?? 'this feature'}</Heading>
+              <BodyText variant="secondary">
+                Upgrade to JawEase Premium for full access.
+              </BodyText>
+              <Button
+                title="Unlock"
+                onPress={handleUnlock}
+                variant="accent"
+                size="md"
+              />
+            </View>
+          </View>
+        )}
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 20,
-    padding: 32,
+  container: { position: 'relative', overflow: 'hidden' },
+  content: { opacity: 0.3 },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
+  blur: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockContent: {
     alignItems: 'center',
     gap: 12,
-    marginHorizontal: 20,
-  },
-  lock: { fontSize: 40 },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.light.text,
-  },
-  message: {
-    fontSize: 16,
-    color: Colors.light.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
+    padding: 24,
   },
 });
+
+export default PaywallGate;

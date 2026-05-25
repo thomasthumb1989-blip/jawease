@@ -59,7 +59,7 @@ export default function PainLogScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Heading level={2}>Log Your Pain</Heading>
 
-        <PainOrb level={painLevel} size={120} />
+        <PainOrb level={painLevel} size="large" />
 
         <View style={styles.painButtons}>
           {Array.from({ length: 11 }, (_, i) => (

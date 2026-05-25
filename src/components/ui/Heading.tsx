@@ -1,22 +1,55 @@
-import React from 'react';
-import { Text, StyleSheet, TextStyle } from 'react-native';
-import { Colors } from '@/src/constants/colors';
+import React, { useEffect } from 'react';
+import { TextStyle } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
+import { useTheme } from '@/src/hooks/useTheme';
 
 interface HeadingProps {
   children: React.ReactNode;
   level?: 1 | 2 | 3;
+  animated?: boolean;
   style?: TextStyle;
 }
 
-export function Heading({ children, level = 1, style }: HeadingProps) {
+const SIZES = {
+  1: { fontSize: 28, lineHeight: 36, fontWeight: '700' as const },
+  2: { fontSize: 22, lineHeight: 30, fontWeight: '600' as const },
+  3: { fontSize: 18, lineHeight: 26, fontWeight: '600' as const },
+};
+
+export function Heading({
+  children,
+  level = 1,
+  animated = false,
+  style,
+}: HeadingProps) {
+  const theme = useTheme();
+  const opacity = useSharedValue(animated ? 0 : 1);
+
+  useEffect(() => {
+    if (animated) {
+      opacity.value = withTiming(1, { duration: 300 });
+    }
+  }, [animated, opacity]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
   return (
-    <Text style={[styles.base, styles[`h${level}`], style]}>{children}</Text>
+    <Animated.Text
+      style={[
+        { color: theme.text, ...SIZES[level] },
+        animStyle,
+        style,
+      ]}
+    >
+      {children}
+    </Animated.Text>
   );
 }
 
-const styles = StyleSheet.create({
-  base: { color: Colors.light.text, fontWeight: '700' },
-  h1: { fontSize: 32, lineHeight: 40 },
-  h2: { fontSize: 24, lineHeight: 32 },
-  h3: { fontSize: 20, lineHeight: 28 },
-});
+export default Heading;

@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import { Colors } from '@/src/constants/colors';
+import Svg, { Circle as SvgCircle } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+import { useTheme } from '@/src/hooks/useTheme';
+
+const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
 interface ProgressRingProps {
   progress: number; // 0-1
   size?: number;
   strokeWidth?: number;
+  color?: string;
   label?: string;
 }
 
@@ -14,39 +23,64 @@ export function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 8,
+  color,
   label,
 }: ProgressRingProps) {
+  const theme = useTheme();
+  const fillColor = color ?? theme.primary;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - Math.min(progress, 1));
+  const cx = size / 2;
+  const cy = size / 2;
+
+  const animatedProgress = useSharedValue(0);
+
+  useEffect(() => {
+    animatedProgress.value = withTiming(Math.min(progress, 1), {
+      duration: 1000,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [progress, animatedProgress]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: circumference * (1 - animatedProgress.value),
+  }));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { width: size, height: size }]}>
       <Svg width={size} height={size}>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
+        {/* Background track */}
+        <SvgCircle
+          cx={cx}
+          cy={cy}
           r={radius}
-          stroke={Colors.light.border}
+          stroke={theme.border}
           strokeWidth={strokeWidth}
           fill="none"
         />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
+        {/* Animated fill */}
+        <AnimatedCircle
+          cx={cx}
+          cy={cy}
           r={radius}
-          stroke={Colors.light.primary}
+          stroke={fillColor}
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
+          animatedProps={animatedProps}
           strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          transform={`rotate(-90 ${cx} ${cy})`}
         />
       </Svg>
-      <View style={[styles.labelContainer, { width: size, height: size }]}>
-        <Text style={styles.percentage}>{Math.round(progress * 100)}%</Text>
-        {label && <Text style={styles.label}>{label}</Text>}
+      <View style={styles.labelContainer}>
+        <Text style={[styles.percentage, { color: theme.text }]}>
+          {Math.round(progress * 100)}%
+        </Text>
+        {label && (
+          <Text style={[styles.label, { color: theme.textMuted }]}>
+            {label}
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -56,17 +90,21 @@ const styles = StyleSheet.create({
   container: { position: 'relative' },
   labelContainer: {
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   percentage: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.light.text,
   },
   label: {
     fontSize: 10,
-    color: Colors.light.textMuted,
     marginTop: 2,
   },
 });
+
+export default ProgressRing;

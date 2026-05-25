@@ -43,17 +43,14 @@ export default function TodayScreen() {
         <BodyText variant="secondary">{Strings.app.tagline}</BodyText>
 
         {/* Pain Status */}
-        <Card variant="elevated" style={styles.painCard}>
-          <PainOrb
-            level={painLevel >= 0 ? painLevel : 0}
-            onPress={() => router.push('/pain-log')}
-          />
-          {painLevel < 0 && (
-            <Pressable onPress={() => router.push('/pain-log')}>
+        <Pressable onPress={() => router.push('/pain-log')}>
+          <Card variant="elevated" style={styles.painCard}>
+            <PainOrb level={painLevel >= 0 ? painLevel : 0} />
+            {painLevel < 0 && (
               <Text style={styles.logPrompt}>Tap to log today's pain</Text>
-            </Pressable>
-          )}
-        </Card>
+            )}
+          </Card>
+        </Pressable>
 
         {/* Streak */}
         <Card style={styles.streakCard}>
