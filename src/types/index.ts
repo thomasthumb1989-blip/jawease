@@ -93,4 +93,6 @@ export interface Insight {
   title: string;
   message: string;
   date: string;
+  /** 0-1 confidence/correlation strength for UI display */
+  confidence?: number;
 }
