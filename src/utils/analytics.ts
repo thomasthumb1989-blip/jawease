@@ -8,7 +8,8 @@ type EventName =
   | 'paywall_shown'
   | 'paywall_purchased'
   | 'paywall_dismissed'
-  | 'streak_milestone';
+  | 'streak_milestone'
+  | 'email_captured';
 
 type EventProperties = Record<string, string | number | boolean>;
 

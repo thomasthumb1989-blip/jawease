@@ -37,7 +37,7 @@ export function SubscriptionProvider({
     <SubscriptionContext.Provider
       value={{
         status,
-        isPremium: status === 'premium',
+        isPremium: status === 'premium' || status === 'trial',
         loading,
         restore,
       }}

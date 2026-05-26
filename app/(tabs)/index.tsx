@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   View,
   ScrollView,
@@ -18,16 +18,10 @@ import { useExercises } from '@/src/hooks/useExercises';
 
 export default function TodayScreen() {
   const router = useRouter();
-  const { profile, onboardingComplete } = useUserContext();
+  const { profile } = useUserContext();
   const { currentStreak, isActiveToday } = useStreak();
   const { todayAverage } = usePainLog();
   const { todayExercises, completedToday } = useExercises();
-
-  useEffect(() => {
-    if (!onboardingComplete) {
-      router.replace('/onboarding');
-    }
-  }, [onboardingComplete]);
 
   const painLevel = todayAverage();
 

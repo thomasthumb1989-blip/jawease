@@ -1,69 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '@/src/constants/colors';
+import { useTheme } from '@/src/hooks/useTheme';
 import { Strings } from '@/src/constants/strings';
 import {
   Heading,
   BodyText,
   Button,
   TextField,
+  Caption,
 } from '@/src/components/ui';
+import { useOnboarding } from '@/src/hooks/useOnboarding';
 import { useEmailCapture } from '@/src/hooks/useEmailCapture';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function EmailScreen() {
   const router = useRouter();
-  const { submit, submitting, submitted } = useEmailCapture();
+  const theme = useTheme();
+  const { saveEmail } = useOnboarding();
+  const { submit, submitting } = useEmailCapture();
   const [email, setEmail] = useState('');
 
-  const handleSubmit = async () => {
-    if (email.includes('@')) {
-      await submit(email);
-    }
-    router.push('/onboarding/paywall');
-  };
+  const isValid = useMemo(() => EMAIL_REGEX.test(email), [email]);
 
-  const handleSkip = () => {
+  const handleContinue = async () => {
+    if (!isValid) return;
+
+    // Save locally first — never block on API
+    await saveEmail(email);
+
+    // Fire-and-forget email capture
+    submit(email).catch(() => {});
+
     router.push('/onboarding/paywall');
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <View style={styles.container}>
         <View style={styles.content}>
           <Heading level={2}>{Strings.onboarding.emailTitle}</Heading>
           <BodyText variant="secondary">
-            Get weekly TMJ tips, exercise reminders, and recovery insights.
+            {Strings.onboarding.emailSubtext}
           </BodyText>
 
           <TextField
             value={email}
             onChangeText={setEmail}
-            placeholder="your@email.com"
+            placeholder={Strings.onboarding.emailPlaceholder}
             keyboardType="email-address"
             autoCapitalize="none"
-            label="Email address"
+            label={Strings.onboarding.emailLabel}
           />
+
+          <Caption muted>{Strings.onboarding.emailCaption}</Caption>
         </View>
 
-        <View style={styles.buttons}>
-          <Button
-            title={submitted ? 'Subscribed!' : 'Subscribe & Continue'}
-            onPress={handleSubmit}
-            loading={submitting}
-            disabled={!email.includes('@') && !submitted}
-          />
-          <Button title="Skip" onPress={handleSkip} variant="ghost" />
-        </View>
+        <Button
+          title={Strings.onboarding.emailCta}
+          onPress={handleContinue}
+          disabled={!isValid}
+          loading={submitting}
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.light.background },
+  safe: { flex: 1 },
   container: { flex: 1, padding: 24, justifyContent: 'space-between' },
   content: { gap: 20 },
-  buttons: { gap: 8 },
 });
