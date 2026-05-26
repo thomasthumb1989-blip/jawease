@@ -98,4 +98,16 @@ export const Strings = {
     severe: 'Severe',
     extreme: 'Extreme',
   },
+  tips: [
+    'Apply a warm compress for 10 minutes to relax jaw muscles',
+    'Avoid chewing gum — it overworks the masseter',
+    'Rest your tongue on the roof of your mouth with teeth apart',
+    'Sleep on your back to reduce jaw pressure',
+    'Practice belly breathing when you notice jaw clenching',
+    'Massage your masseter muscle in circular motions for 30 seconds',
+    'Cut food into small pieces to reduce jaw strain',
+    'Take breaks from screens — tension travels to your jaw',
+    'Stay hydrated — dehydration increases muscle tension',
+    'Notice if you clench during stress — awareness is the first step',
+  ],
 } as const;
