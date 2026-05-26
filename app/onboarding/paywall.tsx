@@ -72,10 +72,11 @@ export default function PaywallScreen() {
   const theme = useTheme();
   const { completeOnboarding } = useOnboarding();
   const { profile } = useUserContext();
-  const { offerings, purchase, loading: subLoading } = useSubscription();
+  const { offerings, purchase, restore, loading: subLoading } = useSubscription();
 
   const [selectedIdx, setSelectedIdx] = useState(1); // default annual
   const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,6 +121,25 @@ export default function PaywallScreen() {
     } catch {
       setErrorMsg('Something went wrong. Please try again.');
       setPurchasing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setRestoring(true);
+    setErrorMsg(null);
+    try {
+      const success = await restore();
+      if (success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await completeOnboarding('active');
+        router.replace('/(tabs)');
+      } else {
+        setErrorMsg('No previous purchases found.');
+      }
+    } catch {
+      setErrorMsg('Restore failed. Please try again.');
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -265,8 +285,17 @@ export default function PaywallScreen() {
             onPress={handlePurchase}
             variant="accent"
             size="lg"
-            disabled={purchasing}
+            disabled={purchasing || restoring}
           />
+          <Pressable
+            onPress={handleRestore}
+            disabled={restoring}
+            style={styles.restoreButton}
+          >
+            <Text style={[styles.restoreText, { color: theme.textMuted }]}>
+              {restoring ? 'Restoring...' : 'Restore Purchases'}
+            </Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     </LinearGradient>
@@ -316,5 +345,7 @@ const styles = StyleSheet.create({
   badgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   planLabel: { fontSize: 13, marginTop: 12 },
   planPrice: { fontSize: 15 },
-  footer: { padding: 24, paddingTop: 8 },
+  footer: { padding: 24, paddingTop: 8, gap: 12 },
+  restoreButton: { alignItems: 'center', paddingVertical: 8 },
+  restoreText: { fontSize: 14 },
 });

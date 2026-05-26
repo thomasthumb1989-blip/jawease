@@ -36,6 +36,7 @@ import { useExercises, REST_DURATION } from '@/src/hooks/useExercises';
 import { usePainLog } from '@/src/hooks/usePainLog';
 import { useStreak } from '@/src/hooks/useStreak';
 import { useUserContext } from '@/src/contexts/UserContext';
+import { useSubscriptionContext } from '@/src/contexts/SubscriptionContext';
 import { trackEvent } from '@/src/utils/analytics';
 import type { Exercise, CompletedExercise } from '@/src/types';
 
@@ -211,6 +212,7 @@ export default function ExerciseFlowScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { profile } = useUserContext();
+  const { isPremium } = useSubscriptionContext();
   const { todayExercises, saveSession, routineDuration } = useExercises();
   const { todayAverage } = usePainLog();
   const { currentStreak } = useStreak();
@@ -251,7 +253,7 @@ export default function ExerciseFlowScreen() {
 
   // ── Handlers ──────────────────────────────────────────────────────
   const handleBegin = () => {
-    if (profile?.subscriptionStatus === 'preview') {
+    if (!isPremium) {
       router.push('/onboarding/paywall');
       return;
     }
