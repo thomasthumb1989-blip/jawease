@@ -9,6 +9,7 @@ import { ExerciseProvider } from '@/src/contexts/ExerciseContext';
 import { SubscriptionProvider } from '@/src/contexts/SubscriptionContext';
 import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
 import { setupNotifications } from '@/src/utils/notifications';
+import { useEmailSequence } from '@/src/hooks/useEmailSequence';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -28,6 +29,9 @@ function RootNavigator() {
   useEffect(() => {
     setupNotifications();
   }, []);
+
+  // ── Email sequences (fire-and-forget on every app open) ──
+  useEmailSequence();
 
   // ── Handle notification taps ──
   useEffect(() => {

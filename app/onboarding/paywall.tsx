@@ -1,5 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Pressable, Text, ScrollView } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,34 +18,31 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { useTheme } from '@/src/hooks/useTheme';
 import { Strings } from '@/src/constants/strings';
-import { Heading, BodyText, Button, GlassCard } from '@/src/components/ui';
+import { Heading, BodyText, Button, GlassCard, Caption } from '@/src/components/ui';
 import { useOnboarding } from '@/src/hooks/useOnboarding';
 import { useUserContext } from '@/src/contexts/UserContext';
 import { useSubscription } from '@/src/hooks/useSubscription';
 import { trackEvent } from '@/src/utils/analytics';
 
-type PricePlan = 'monthly' | 'annual' | 'lifetime';
+// ─── Map RevenueCat package identifiers to display ──────
+const PACKAGE_META: Record<string, { label: string; badge?: string }> = {
+  $rc_monthly: { label: 'Monthly' },
+  $rc_annual: { label: 'Annual', badge: 'SAVE 50%' },
+  $rc_lifetime: { label: 'Lifetime' },
+};
 
-const PLANS: { key: PricePlan; label: string; price: string; badge?: string }[] = [
-  { key: 'monthly', label: 'Monthly', price: Strings.onboarding.paywallMonthly },
-  {
-    key: 'annual',
-    label: 'Annual',
-    price: Strings.onboarding.paywallAnnual,
-    badge: Strings.onboarding.paywallAnnualBadge,
-  },
-  { key: 'lifetime', label: 'Lifetime', price: Strings.onboarding.paywallLifetime },
+// Fallback static plans when offerings unavailable
+const FALLBACK_PLANS = [
+  { label: 'Monthly', price: Strings.onboarding.paywallMonthly, id: '$rc_monthly' },
+  { label: 'Annual', price: Strings.onboarding.paywallAnnual, id: '$rc_annual', badge: Strings.onboarding.paywallAnnualBadge },
+  { label: 'Lifetime', price: Strings.onboarding.paywallLifetime, id: '$rc_lifetime' },
 ];
 
-function BenefitRow({
-  text,
-  delay,
-}: {
-  text: string;
-  delay: number;
-}) {
+// ─── Benefit row with slide-in ──────────────────────────
+function BenefitRow({ text, delay }: { text: string; delay: number }) {
   const theme = useTheme();
   const opacity = useSharedValue(0);
   const translateX = useSharedValue(-12);
@@ -62,17 +66,28 @@ function BenefitRow({
   );
 }
 
+// ─── Main ────────────────────────────────────────────────
 export default function PaywallScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { completeOnboarding } = useOnboarding();
   const { profile } = useUserContext();
-  const { purchase } = useSubscription();
-  const [selectedPlan, setSelectedPlan] = useState<PricePlan>('annual');
+  const { offerings, purchase, loading: subLoading } = useSubscription();
+
+  const [selectedIdx, setSelectedIdx] = useState(1); // default annual
+  const [purchasing, setPurchasing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     trackEvent('paywall_shown');
   }, []);
+
+  // Build plan list from RevenueCat offerings (fallback to static)
+  const packages = useMemo(() => {
+    const pkgs = offerings?.current?.availablePackages;
+    if (!pkgs || pkgs.length === 0) return null;
+    return pkgs;
+  }, [offerings]);
 
   const symptomNames = (profile?.symptoms ?? [])
     .slice(0, 3)
@@ -84,11 +99,28 @@ export default function PaywallScreen() {
     : "We've created a personalised recovery plan for you.";
 
   const handlePurchase = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await purchase();
-    trackEvent('paywall_purchased');
-    await completeOnboarding('trial');
-    router.replace('/(tabs)');
+    setErrorMsg(null);
+    setPurchasing(true);
+
+    try {
+      if (packages) {
+        const pkg = packages[selectedIdx] ?? packages[0];
+        const success = await purchase(pkg);
+        if (!success) {
+          // User cancelled or error — stay on screen
+          setPurchasing(false);
+          return;
+        }
+        trackEvent('paywall_purchased', { package: pkg.identifier });
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await completeOnboarding('trial');
+      router.replace('/(tabs)');
+    } catch {
+      setErrorMsg('Something went wrong. Please try again.');
+      setPurchasing(false);
+    }
   };
 
   const handleDismiss = async () => {
@@ -97,9 +129,56 @@ export default function PaywallScreen() {
     router.replace('/(tabs)');
   };
 
-  const selectPlan = (plan: PricePlan) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSelectedPlan(plan);
+  // ── Render plan card (RevenueCat or fallback) ──
+  const renderPlanCard = (
+    id: string,
+    label: string,
+    price: string,
+    badge: string | undefined,
+    index: number,
+  ) => {
+    const active = selectedIdx === index;
+    return (
+      <Pressable
+        key={id}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setSelectedIdx(index);
+        }}
+        style={[
+          styles.planCard,
+          {
+            borderColor: active ? theme.accent : theme.border,
+            backgroundColor: active ? theme.accent + '15' : theme.card,
+          },
+        ]}
+      >
+        {badge && (
+          <View style={[styles.badge, { backgroundColor: theme.accent }]}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
+        <Text
+          style={[
+            styles.planLabel,
+            { color: active ? theme.accent : theme.textSecondary },
+          ]}
+        >
+          {label}
+        </Text>
+        <Text
+          style={[
+            styles.planPrice,
+            {
+              color: active ? theme.text : theme.textSecondary,
+              fontWeight: active ? '700' : '500',
+            },
+          ]}
+        >
+          {price}
+        </Text>
+      </Pressable>
+    );
   };
 
   return (
@@ -127,7 +206,6 @@ export default function PaywallScreen() {
             {Strings.onboarding.paywallHeading}
           </Heading>
 
-          {/* Personalised message card */}
           <GlassCard>
             <BodyText style={{ textAlign: 'center' }}>
               {personalMessage}
@@ -141,66 +219,53 @@ export default function PaywallScreen() {
             ))}
           </View>
 
-          {/* Price cards */}
-          <View style={styles.plans}>
-            {PLANS.map((plan) => {
-              const active = selectedPlan === plan.key;
-              return (
-                <Pressable
-                  key={plan.key}
-                  onPress={() => selectPlan(plan.key)}
-                  style={[
-                    styles.planCard,
-                    {
-                      borderColor: active ? theme.accent : theme.border,
-                      backgroundColor: active
-                        ? theme.accent + '15'
-                        : theme.card,
-                    },
-                  ]}
-                >
-                  {plan.badge && (
-                    <View
-                      style={[
-                        styles.badge,
-                        { backgroundColor: theme.accent },
-                      ]}
-                    >
-                      <Text style={styles.badgeText}>{plan.badge}</Text>
-                    </View>
+          {/* Price cards — real or fallback */}
+          {subLoading ? (
+            <ActivityIndicator
+              size="large"
+              color="#FFFFFF"
+              style={{ marginVertical: 16 }}
+            />
+          ) : (
+            <View style={styles.plans}>
+              {packages
+                ? packages.map((pkg: PurchasesPackage, i: number) => {
+                    const meta = PACKAGE_META[pkg.identifier] ?? {
+                      label: pkg.packageType ?? pkg.identifier,
+                    };
+                    return renderPlanCard(
+                      pkg.identifier,
+                      meta.label,
+                      pkg.product.priceString,
+                      meta.badge,
+                      i,
+                    );
+                  })
+                : FALLBACK_PLANS.map((p, i) =>
+                    renderPlanCard(p.id, p.label, p.price, p.badge, i),
                   )}
-                  <Text
-                    style={[
-                      styles.planLabel,
-                      { color: active ? theme.accent : theme.textSecondary },
-                    ]}
-                  >
-                    {plan.label}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.planPrice,
-                      {
-                        color: active ? theme.text : theme.textSecondary,
-                        fontWeight: active ? '700' : '500',
-                      },
-                    ]}
-                  >
-                    {plan.price}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+            </View>
+          )}
+
+          {errorMsg && (
+            <Caption style={{ color: theme.error, textAlign: 'center' }}>
+              {errorMsg}
+            </Caption>
+          )}
         </ScrollView>
 
         {/* CTA */}
         <View style={styles.footer}>
           <Button
-            title={Strings.onboarding.paywallCta}
+            title={
+              purchasing
+                ? 'Processing...'
+                : Strings.onboarding.paywallCta
+            }
             onPress={handlePurchase}
             variant="accent"
             size="lg"
+            disabled={purchasing}
           />
         </View>
       </SafeAreaView>
@@ -223,30 +288,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dismissX: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 48,
-    gap: 24,
-  },
+  dismissX: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  scrollContent: { padding: 24, paddingTop: 48, gap: 24 },
   benefits: { gap: 12 },
-  benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  checkIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  plans: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  checkIcon: { fontSize: 18, fontWeight: '700' },
+  plans: { flexDirection: 'row', gap: 10 },
   planCard: {
     flex: 1,
     paddingVertical: 16,
@@ -266,18 +313,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     alignItems: 'center',
   },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  planLabel: {
-    fontSize: 13,
-    marginTop: 12,
-  },
-  planPrice: {
-    fontSize: 15,
-  },
+  badgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  planLabel: { fontSize: 13, marginTop: 12 },
+  planPrice: { fontSize: 15 },
   footer: { padding: 24, paddingTop: 8 },
 });

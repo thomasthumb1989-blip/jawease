@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Platform, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useTheme, useColorSchemeValue } from '@/src/hooks/useTheme';
@@ -16,8 +16,20 @@ interface PaywallGateProps {
 export function PaywallGate({ children, feature }: PaywallGateProps) {
   const theme = useTheme();
   const scheme = useColorSchemeValue();
-  const { isPremium } = useSubscriptionContext();
+  const { isPremium, status } = useSubscriptionContext();
   const router = useRouter();
+
+  // Still checking — show children with spinner overlay
+  if (status === 'loading') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>{children}</View>
+        <View style={[styles.overlay, styles.blur, { backgroundColor: theme.background + 'CC' }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </View>
+    );
+  }
 
   if (isPremium) {
     return <>{children}</>;

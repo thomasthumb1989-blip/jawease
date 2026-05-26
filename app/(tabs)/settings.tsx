@@ -333,16 +333,20 @@ function StatusBadge({ status }: { status: string }) {
     free: S.statusFree,
     trial: S.statusTrial,
     premium: S.statusPremium,
+    active: 'Pro',
     expired: S.statusExpired,
     preview: S.statusPreview,
+    loading: 'Checking...',
   };
 
   const colorMap: Record<string, string> = {
     free: theme.textMuted,
     trial: theme.accent,
     premium: theme.success,
+    active: theme.success,
     expired: theme.error,
     preview: theme.textMuted,
+    loading: theme.textMuted,
   };
 
   const bg = (colorMap[status] ?? theme.textMuted) + '20';
@@ -404,10 +408,14 @@ export default function SettingsScreen() {
   const handleRestore = useCallback(async () => {
     setRestoring(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await restore();
+    const success = await restore();
     setRestoring(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert(S.restoreSuccess);
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(S.restoreSuccess);
+    } else {
+      Alert.alert('No purchases found', 'We couldn\'t find any previous purchases to restore.');
+    }
   }, [restore]);
 
   const handleClearData = useCallback(() => {

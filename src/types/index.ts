@@ -16,7 +16,14 @@ export type Trigger =
   | 'caffeine'
   | 'alcohol';
 
-export type SubscriptionStatus = 'free' | 'trial' | 'premium' | 'expired' | 'preview';
+export type SubscriptionStatus =
+  | 'loading'
+  | 'trial'
+  | 'active'
+  | 'expired'
+  | 'preview'
+  | 'free'
+  | 'premium';
 
 export type Difficulty = 'easy' | 'moderate' | 'challenging';
 
