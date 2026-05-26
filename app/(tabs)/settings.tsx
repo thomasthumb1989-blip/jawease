@@ -692,7 +692,7 @@ export default function SettingsScreen() {
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  // Stub — will use expo-store-review when installed
+                  // Opens store listing for rating
                   const storeUrl = Platform.select({
                     ios: 'https://apps.apple.com/app/jawease/id0000000000',
                     android:

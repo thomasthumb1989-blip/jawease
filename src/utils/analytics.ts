@@ -1,4 +1,4 @@
-// Analytics stub — plug in PostHog, Amplitude, or similar later
+// Analytics — no-op until PostHog/Amplitude configured
 type EventName =
   | 'onboarding_started'
   | 'onboarding_completed'
