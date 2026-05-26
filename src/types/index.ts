@@ -41,8 +41,14 @@ export interface UserProfile {
   difficulty: Difficulty;
   reminderEnabled?: boolean;
   reminderTime?: string;
+  painReminderEnabled?: boolean;
   subscriptionStatus?: SubscriptionStatus;
   createdAt?: string;
+  /** Preferences */
+  audioCues?: boolean;
+  hapticFeedback?: boolean;
+  restDuration?: number; // 0, 15, 30 seconds
+  sessionLength?: number; // 5, 8, 12 minutes
 }
 
 export interface PainLog {
