@@ -60,6 +60,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       // Guard: no key → preview mode (never crash)
       if (!apiKey) {
+        // Web-only: allow localStorage override for dev/screenshots
+        if (Platform.OS === 'web') {
+          try {
+            const override = window.localStorage.getItem('jawease_subscription_override');
+            if (override === 'active' || override === 'trial') {
+              if (!cancelled) {
+                setStatus(override as SubscriptionStatus);
+                setLoading(false);
+              }
+              return;
+            }
+          } catch { /* ignore */ }
+        }
         if (!cancelled) {
           setStatus('preview');
           setLoading(false);

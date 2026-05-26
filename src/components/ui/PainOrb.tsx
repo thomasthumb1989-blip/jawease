@@ -1,12 +1,5 @@
 import React, { useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import {
-  Canvas,
-  Circle,
-  RadialGradient,
-  vec,
-  BlurMask,
-} from '@shopify/react-native-skia';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import {
   Gesture,
   GestureDetector,
@@ -21,6 +14,22 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/hooks/useTheme';
 import { Fonts } from '@/src/constants/fonts';
+
+// Skia crashes on web (no CanvasKit) — lazy import for native only
+let Canvas: any;
+let SkiaCircle: any;
+let RadialGradient: any;
+let vec: any;
+let BlurMask: any;
+
+if (Platform.OS !== 'web') {
+  const Skia = require('@shopify/react-native-skia');
+  Canvas = Skia.Canvas;
+  SkiaCircle = Skia.Circle;
+  RadialGradient = Skia.RadialGradient;
+  vec = Skia.vec;
+  BlurMask = Skia.BlurMask;
+}
 
 interface PainOrbProps {
   level: number;
@@ -64,7 +73,9 @@ export const PainOrb = React.memo(function PainOrb({
   }, [level, painValue, lastIntLevel]);
 
   const fireHaptic = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
   }, []);
 
   const updateLevel = useCallback(
@@ -119,39 +130,48 @@ export const PainOrb = React.memo(function PainOrb({
   const innerColor = level <= 3 ? theme.primaryLight : level <= 6 ? theme.accentGlow : '#E86B6B';
   const glowColor = outerColor + '4D'; // 30% opacity
 
-  const orbContent = (
+  // Web fallback: CSS gradient circle (no Skia)
+  const webOrb = (
     <View style={[styles.wrapper, { width: canvasSize, height: canvasSize }]}>
-      <Canvas style={{ width: canvasSize, height: canvasSize }}>
-        {/* Outer glow ring */}
-        <Circle cx={center} cy={center} r={glowRadius}>
-          <RadialGradient
-            c={vec(center, center)}
-            r={glowRadius}
-            colors={[glowColor, 'transparent']}
-          />
-          <BlurMask blur={8} style="normal" />
-        </Circle>
-
-        {/* Main orb with radial gradient */}
-        <Circle cx={center} cy={center} r={radius}>
-          <RadialGradient
-            c={vec(center * 0.85, center * 0.85)}
-            r={radius * 1.4}
-            colors={[innerColor, outerColor]}
-          />
-        </Circle>
-
-        {/* Inner highlight for glass refraction */}
-        <Circle cx={center * 0.8} cy={center * 0.75} r={radius * 0.35}>
-          <RadialGradient
-            c={vec(center * 0.8, center * 0.75)}
-            r={radius * 0.35}
-            colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0)']}
-          />
-        </Circle>
-      </Canvas>
-
-      {/* Pain number overlay */}
+      <View
+        style={[
+          styles.webGlow,
+          {
+            width: glowRadius * 2,
+            height: glowRadius * 2,
+            borderRadius: glowRadius,
+            backgroundColor: glowColor,
+            top: center - glowRadius,
+            left: center - glowRadius,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.webOrb,
+          {
+            width: px,
+            height: px,
+            borderRadius: radius,
+            backgroundColor: outerColor,
+            top: center - radius,
+            left: center - radius,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.webHighlight,
+            {
+              width: radius * 0.7,
+              height: radius * 0.7,
+              borderRadius: radius * 0.35,
+              top: radius * 0.15,
+              left: radius * 0.15,
+            },
+          ]}
+        />
+      </View>
       <View style={[styles.numberOverlay, { width: canvasSize, height: canvasSize }]}>
         <Text style={[styles.number, { fontSize }]}>
           {Math.round(level)}
@@ -159,6 +179,49 @@ export const PainOrb = React.memo(function PainOrb({
       </View>
     </View>
   );
+
+  // Native: full Skia orb
+  const nativeOrb = Platform.OS !== 'web' ? (
+    <View style={[styles.wrapper, { width: canvasSize, height: canvasSize }]}>
+      <Canvas style={{ width: canvasSize, height: canvasSize }}>
+        {/* Outer glow ring */}
+        <SkiaCircle cx={center} cy={center} r={glowRadius}>
+          <RadialGradient
+            c={vec(center, center)}
+            r={glowRadius}
+            colors={[glowColor, 'transparent']}
+          />
+          <BlurMask blur={8} style="normal" />
+        </SkiaCircle>
+
+        {/* Main orb with radial gradient */}
+        <SkiaCircle cx={center} cy={center} r={radius}>
+          <RadialGradient
+            c={vec(center * 0.85, center * 0.85)}
+            r={radius * 1.4}
+            colors={[innerColor, outerColor]}
+          />
+        </SkiaCircle>
+
+        {/* Inner highlight for glass refraction */}
+        <SkiaCircle cx={center * 0.8} cy={center * 0.75} r={radius * 0.35}>
+          <RadialGradient
+            c={vec(center * 0.8, center * 0.75)}
+            r={radius * 0.35}
+            colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0)']}
+          />
+        </SkiaCircle>
+      </Canvas>
+
+      <View style={[styles.numberOverlay, { width: canvasSize, height: canvasSize }]}>
+        <Text style={[styles.number, { fontSize }]}>
+          {Math.round(level)}
+        </Text>
+      </View>
+    </View>
+  ) : null;
+
+  const orbContent = Platform.OS === 'web' ? webOrb : nativeOrb;
 
   return (
     <View style={styles.container}>
@@ -194,6 +257,19 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Web fallback styles
+  webGlow: {
+    position: 'absolute',
+    opacity: 0.3,
+  },
+  webOrb: {
+    position: 'absolute',
+    overflow: 'hidden',
+  },
+  webHighlight: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255,0.25)',
   },
 });
 
