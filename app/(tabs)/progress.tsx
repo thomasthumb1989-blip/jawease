@@ -40,6 +40,7 @@ import {
   LoadingIndicator,
 } from '@/src/components/ui';
 import { Fonts } from '@/src/constants/fonts';
+import { Strings } from '@/src/constants/strings';
 import { useStreak } from '@/src/hooks/useStreak';
 import { usePainLog } from '@/src/hooks/usePainLog';
 import { useExerciseContext } from '@/src/contexts/ExerciseContext';
@@ -534,15 +535,15 @@ export default function ProgressScreen() {
           />
         }
       >
-        <Heading>Progress</Heading>
+        <Heading>{Strings.progress.heading}</Heading>
 
         {/* ── 1. Hero Metric ── */}
         <FadeIn delay={0}>
           {!hasEnoughData ? (
             <GlassCard>
               <EmptyState
-                title="No data yet"
-                message="Log your pain to see trends"
+                title={Strings.progress.noDataTitle}
+                message={Strings.progress.noDataMessage}
               />
             </GlassCard>
           ) : (
@@ -555,11 +556,11 @@ export default function ProgressScreen() {
                   {trendArrow}
                 </Text>
               </View>
-              <Caption muted>Average pain this week</Caption>
+              <Caption muted>{Strings.progress.avgPainWeek}</Caption>
               {lastWeekAvg >= 0 && Math.abs(trendPct) >= 5 && (
                 <Caption muted>
-                  {trendDirection === 'down' ? 'Down' : 'Up'} from{' '}
-                  {lastWeekAvg.toFixed(1)} last week
+                  {trendDirection === 'down' ? Strings.progress.trendDown : Strings.progress.trendUp}{' '}
+                  {lastWeekAvg.toFixed(1)} {Strings.progress.lastWeek}
                 </Caption>
               )}
             </GlassCard>
@@ -576,20 +577,20 @@ export default function ProgressScreen() {
                     {currentStreak}
                   </Text>
                   <Text style={[styles.streakLabel, { color: theme.text }]}>
-                    Day Streak
+                    {Strings.progress.dayStreak}
                   </Text>
                   <Text style={{ fontSize: flameSize }}>{'🔥'}</Text>
                 </View>
                 <View style={styles.streakRight}>
                   <Caption muted>
-                    Personal best: {longestStreak} days
+                    {Strings.progress.personalBest} {longestStreak} {Strings.progress.daysLabel}
                   </Caption>
                 </View>
               </View>
 
               <View style={styles.heatmapContainer}>
                 <Caption muted style={{ marginBottom: 8 }}>
-                  Last 28 days
+                  {Strings.progress.last28}
                 </Caption>
                 <Heatmap sessionDates={sessionDates} />
               </View>
@@ -601,13 +602,13 @@ export default function ProgressScreen() {
         <FadeIn delay={200}>
           <PaywallGate feature="Pain Analytics">
             <Card variant="elevated">
-              <Heading level={3}>Pain History</Heading>
+              <Heading level={3}>{Strings.progress.painHistory}</Heading>
 
               <View style={styles.rangeRow}>
                 {([7, 30, 90] as const).map((r) => (
                   <RangePill
                     key={r}
-                    label={`${r} Days`}
+                    label={`${r} ${Strings.progress.daysRange}`}
                     selected={chartRange === r}
                     onPress={() => setChartRange(r)}
                   />
@@ -617,7 +618,7 @@ export default function ProgressScreen() {
               {chartData.length < 3 ? (
                 <View style={styles.chartEmpty}>
                   <Caption muted>
-                    Keep logging to see your chart (need 3+ entries)
+                    {Strings.progress.chartNeedMore}
                   </Caption>
                 </View>
               ) : (
@@ -631,18 +632,18 @@ export default function ProgressScreen() {
         <FadeIn delay={300}>
           <PaywallGate feature="Smart Insights">
             <View style={styles.insightsSection}>
-              <Heading level={3}>Smart Insights</Heading>
+              <Heading level={3}>{Strings.progress.smartInsights}</Heading>
 
               {logs.length < 7 ? (
                 <Card>
                   <Caption muted>
-                    Keep logging for 7 days to unlock insights
+                    {Strings.progress.insightsNeedMore}
                   </Caption>
                 </Card>
               ) : insights.length === 0 ? (
                 <Card>
                   <Caption muted>
-                    Not enough patterns yet — keep logging!
+                    {Strings.progress.insightsNoPatterns}
                   </Caption>
                 </Card>
               ) : (
@@ -678,7 +679,7 @@ export default function ProgressScreen() {
         {/* ── 5. Exercise Stats ── */}
         <FadeIn delay={400}>
           <Card variant="elevated">
-            <Heading level={3}>Exercise Stats</Heading>
+            <Heading level={3}>{Strings.progress.exerciseStats}</Heading>
             <View style={styles.statsRow}>
               <View style={styles.statBlock}>
                 <AnimatedNumber
@@ -686,7 +687,7 @@ export default function ProgressScreen() {
                   color={theme.accent}
                   size={32}
                 />
-                <Caption muted>Sessions</Caption>
+                <Caption muted>{Strings.progress.sessions}</Caption>
               </View>
               <View style={styles.statBlock}>
                 <AnimatedNumber
@@ -694,12 +695,12 @@ export default function ProgressScreen() {
                   color={theme.accent}
                   size={32}
                 />
-                <Caption muted>Minutes</Caption>
+                <Caption muted>{Strings.progress.minutes}</Caption>
               </View>
             </View>
             {topExerciseName !== '—' && (
               <View style={[styles.topExercise, { borderTopColor: theme.border }]}>
-                <Caption muted>Most completed</Caption>
+                <Caption muted>{Strings.progress.mostCompleted}</Caption>
                 <Text style={[styles.topName, { color: theme.text }]}>
                   {topExerciseName}
                 </Text>

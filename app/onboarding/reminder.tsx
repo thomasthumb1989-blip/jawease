@@ -97,7 +97,7 @@ export default function ReminderScreen() {
           )}
         </View>
 
-        <Button title="Continue" onPress={handleNext} />
+        <Button title={Strings.common.continue} onPress={handleNext} />
       </View>
     </SafeAreaView>
   );

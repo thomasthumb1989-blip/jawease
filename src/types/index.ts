@@ -49,7 +49,6 @@ export interface UserProfile {
   reminderEnabled?: boolean;
   reminderTime?: string;
   painReminderEnabled?: boolean;
-  subscriptionStatus?: SubscriptionStatus;
   createdAt?: string;
   /** Preferences */
   audioCues?: boolean;

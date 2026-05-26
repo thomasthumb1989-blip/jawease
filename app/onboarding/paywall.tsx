@@ -116,10 +116,10 @@ export default function PaywallScreen() {
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await completeOnboarding('trial');
+      await completeOnboarding();
       router.replace('/(tabs)');
     } catch {
-      setErrorMsg('Something went wrong. Please try again.');
+      setErrorMsg(Strings.onboarding.paywallError);
       setPurchasing(false);
     }
   };
@@ -131,13 +131,13 @@ export default function PaywallScreen() {
       const success = await restore();
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await completeOnboarding('active');
+        await completeOnboarding();
         router.replace('/(tabs)');
       } else {
-        setErrorMsg('No previous purchases found.');
+        setErrorMsg(Strings.onboarding.paywallRestoreNone);
       }
     } catch {
-      setErrorMsg('Restore failed. Please try again.');
+      setErrorMsg(Strings.onboarding.paywallRestoreFailed);
     } finally {
       setRestoring(false);
     }
@@ -145,7 +145,7 @@ export default function PaywallScreen() {
 
   const handleDismiss = async () => {
     trackEvent('paywall_dismissed');
-    await completeOnboarding('preview');
+    await completeOnboarding();
     router.replace('/(tabs)');
   };
 
@@ -279,7 +279,7 @@ export default function PaywallScreen() {
           <Button
             title={
               purchasing
-                ? 'Processing...'
+                ? Strings.common.processing
                 : Strings.onboarding.paywallCta
             }
             onPress={handlePurchase}
@@ -293,7 +293,7 @@ export default function PaywallScreen() {
             style={styles.restoreButton}
           >
             <Text style={[styles.restoreText, { color: theme.textMuted }]}>
-              {restoring ? 'Restoring...' : 'Restore Purchases'}
+              {restoring ? Strings.common.restoring : Strings.onboarding.paywallRestore}
             </Text>
           </Pressable>
         </View>

@@ -28,6 +28,7 @@ import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/src/hooks/useTheme';
 import { Strings } from '@/src/constants/strings';
+import { Config } from '@/src/constants/config';
 import {
   Heading,
   BodyText,
@@ -311,7 +312,7 @@ function SymptomModal({
           </View>
 
           <Button
-            title="Save"
+            title={Strings.common.save}
             onPress={() => {
               onSave(selected);
               onClose();
@@ -333,10 +334,10 @@ function StatusBadge({ status }: { status: string }) {
     free: S.statusFree,
     trial: S.statusTrial,
     premium: S.statusPremium,
-    active: 'Pro',
+    active: S.statusActive,
     expired: S.statusExpired,
     preview: S.statusPreview,
-    loading: 'Checking...',
+    loading: S.statusLoading,
   };
 
   const colorMap: Record<string, string> = {
@@ -414,7 +415,7 @@ export default function SettingsScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(S.restoreSuccess);
     } else {
-      Alert.alert('No purchases found', 'We couldn\'t find any previous purchases to restore.');
+      Alert.alert(S.restoreNone, S.restoreNoneMessage);
     }
   }, [restore]);
 
@@ -613,11 +614,11 @@ export default function SettingsScreen() {
                   const { uri } = await Print.printToFileAsync({ html });
                   await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
-                    dialogTitle: 'Share Doctor Report',
+                    dialogTitle: S.shareReportTitle,
                     UTI: 'com.adobe.pdf',
                   });
                 } catch {
-                  Alert.alert('Export failed', 'Could not generate the report.');
+                  Alert.alert(S.exportFailed, S.exportFailedMessage);
                 } finally {
                   setExporting(false);
                 }
@@ -637,7 +638,7 @@ export default function SettingsScreen() {
           <Card>
             <View style={[styles.subStatusRow, { borderBottomColor: theme.border }]}>
               <Text style={[styles.settingLabel, { color: theme.text }]}>
-                Status
+                {S.statusLabel}
               </Text>
               <StatusBadge status={status} />
             </View>
@@ -688,15 +689,15 @@ export default function SettingsScreen() {
           <View style={styles.appInfo}>
             <Caption muted>{S.version}</Caption>
             <Caption muted>{S.madeWith}</Caption>
-            {showRateApp && (
+            {showRateApp && (Config.store.iosAppId || Platform.OS === 'android') && (
               <Pressable
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  // Opens store listing for rating
                   const storeUrl = Platform.select({
-                    ios: 'https://apps.apple.com/app/jawease/id0000000000',
-                    android:
-                      'https://play.google.com/store/apps/details?id=uk.karamafandi.jawease',
+                    ios: Config.store.iosAppId
+                      ? `https://apps.apple.com/app/jawease/id${Config.store.iosAppId}`
+                      : '',
+                    android: `https://play.google.com/store/apps/details?id=${Config.store.androidPackage}`,
                     default: '',
                   });
                   if (storeUrl) Linking.openURL(storeUrl);

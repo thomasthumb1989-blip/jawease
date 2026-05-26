@@ -108,7 +108,7 @@ export default function SymptomsScreen() {
       </ScrollView>
       <View style={styles.footer}>
         <Button
-          title="Continue"
+          title={Strings.common.continue}
           onPress={handleNext}
           disabled={selected.length === 0}
         />

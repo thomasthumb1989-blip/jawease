@@ -41,9 +41,9 @@ import { useInsights } from '@/src/hooks/useInsights';
 // ─── Helpers ──────────────────────────────────────────────
 function getGreeting(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 12) return Strings.today.greeting.morning;
+  if (h < 18) return Strings.today.greeting.afternoon;
+  return Strings.today.greeting.evening;
 }
 
 function getTodayTip(): string {
@@ -199,7 +199,7 @@ export default function TodayScreen() {
               Day {currentStreak} {'🔥'}
             </Text>
           ) : (
-            <BodyText variant="muted">Start your first day!</BodyText>
+            <BodyText variant="muted">{Strings.today.startFirstDay}</BodyText>
           )}
         </FadeIn>
 
@@ -285,7 +285,7 @@ export default function TodayScreen() {
                 <PainOrb level={painLevel >= 0 ? painLevel : 0} size="small" />
                 <View style={styles.painText}>
                   <Text style={[styles.painPrompt, { color: theme.text }]}>
-                    How's your jaw right now?
+                    {Strings.today.jawPrompt}
                   </Text>
                   {lastLogText && <Caption muted>{lastLogText}</Caption>}
                 </View>

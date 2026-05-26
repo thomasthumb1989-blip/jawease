@@ -121,7 +121,7 @@ function getInstruction(
     return `${Strings.exerciseFlow.rep} ${currentRep} of ${exercise.reps}`;
   }
 
-  return 'Continue...';
+  return Strings.exerciseFlow.continue;
 }
 
 // ─── Rest Phase ─────────────────────────────────────────────────────
@@ -244,8 +244,8 @@ export default function ExerciseFlowScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.center}>
-          <BodyText>Exercise not found</BodyText>
-          <Button title="Go Back" onPress={() => router.back()} />
+          <BodyText>{Strings.exerciseFlow.notFound}</BodyText>
+          <Button title={Strings.common.goBack} onPress={() => router.back()} />
         </View>
       </SafeAreaView>
     );
@@ -368,7 +368,7 @@ export default function ExerciseFlowScreen() {
               size="lg"
             />
             <Button
-              title="Go Back"
+              title={Strings.common.goBack}
               onPress={() => router.back()}
               variant="ghost"
             />

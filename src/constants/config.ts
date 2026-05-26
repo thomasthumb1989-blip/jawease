@@ -7,4 +7,8 @@ export const Config = {
     apiKey: process.env.EXPO_PUBLIC_RESEND_API_KEY ?? '',
     audienceId: process.env.EXPO_PUBLIC_RESEND_AUDIENCE_ID ?? '',
   },
+  store: {
+    iosAppId: process.env.EXPO_PUBLIC_IOS_APP_ID ?? '',
+    androidPackage: 'uk.karamafandi.jawease',
+  },
 } as const;

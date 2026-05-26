@@ -1,6 +1,6 @@
 import { useUserContext } from '@/src/contexts/UserContext';
 import { trackEvent } from '@/src/utils/analytics';
-import type { Symptom, Difficulty, SubscriptionStatus } from '@/src/types';
+import type { Symptom, Difficulty } from '@/src/types';
 
 export function useOnboarding() {
   const { updateProfile, setOnboardingComplete } = useUserContext();
@@ -25,10 +25,8 @@ export function useOnboarding() {
     await updateProfile({ email });
   };
 
-  const completeOnboarding = async (
-    subscriptionStatus: SubscriptionStatus = 'free'
-  ) => {
-    await updateProfile({ subscriptionStatus, createdAt: new Date().toISOString() });
+  const completeOnboarding = async () => {
+    await updateProfile({ createdAt: new Date().toISOString() });
     await setOnboardingComplete(true);
     trackEvent('onboarding_completed');
   };

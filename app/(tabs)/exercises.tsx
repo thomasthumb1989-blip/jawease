@@ -19,6 +19,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Strings } from '@/src/constants/strings';
 import {
   Heading,
   BodyText,
@@ -226,7 +227,7 @@ function ExerciseDetail({
 
         <PaywallGate feature="Guided Exercises">
           <Button
-            title="Start This Exercise"
+            title={Strings.exerciseFlow.startExercise}
             onPress={onStart}
             variant="primary"
             size="lg"
@@ -304,7 +305,7 @@ export default function ExercisesScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
-        <Heading>Exercises</Heading>
+        <Heading>{Strings.exercises.heading}</Heading>
 
         <View style={styles.searchRow}>
           <Ionicons
@@ -338,8 +339,8 @@ export default function ExercisesScreen() {
 
       {filtered.length === 0 ? (
         <EmptyState
-          title="No exercises found"
-          message="Try a different search term or filter."
+          title={Strings.exercises.noResults}
+          message={Strings.exercises.noResultsHint}
         />
       ) : (
         <FlatList

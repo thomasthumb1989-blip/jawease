@@ -67,11 +67,11 @@ export default function BaselineScreen() {
           </Animated.View>
 
           <BodyText variant="muted" style={{ textAlign: 'center' }}>
-            Drag the orb to adjust
+            {Strings.painLog.orbHint}
           </BodyText>
         </View>
 
-        <Button title="Continue" onPress={handleNext} />
+        <Button title={Strings.common.continue} onPress={handleNext} />
       </View>
     </SafeAreaView>
   );

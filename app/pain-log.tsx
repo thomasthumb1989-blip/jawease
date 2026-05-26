@@ -135,7 +135,7 @@ export default function PainLogScreen() {
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
         <View style={styles.savedContainer}>
           <Text style={[styles.savedEmoji, { color: theme.success }]}>✓</Text>
-          <Heading level={2}>Pain Logged</Heading>
+          <Heading level={2}>{Strings.painLog.logged}</Heading>
         </View>
       </SafeAreaView>
     );
@@ -148,7 +148,7 @@ export default function PainLogScreen() {
     >
       <SafeAreaView style={styles.safe}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Heading level={2}>Log Your Pain</Heading>
+          <Heading level={2}>{Strings.painLog.title}</Heading>
 
           <PainOrb
             level={painLevel}
@@ -167,12 +167,12 @@ export default function PainLogScreen() {
           </Animated.View>
 
           <BodyText variant="muted" style={{ textAlign: 'center' }}>
-            Drag the orb to adjust
+            {Strings.painLog.orbHint}
           </BodyText>
 
           {/* Triggers */}
           <GlassCard style={styles.triggersCard}>
-            <BodyText variant="secondary">Any triggers today?</BodyText>
+            <BodyText variant="secondary">{Strings.painLog.triggersPrompt}</BodyText>
             <View style={styles.triggersGrid}>
               {triggerKeys.map((key) => (
                 <TriggerPill
@@ -194,9 +194,9 @@ export default function PainLogScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button title="Save" onPress={handleSave} variant="accent" />
+          <Button title={Strings.common.save} onPress={handleSave} variant="accent" />
           <Button
-            title="Cancel"
+            title={Strings.common.cancel}
             onPress={() => router.back()}
             variant="ghost"
           />
