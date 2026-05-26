@@ -2,18 +2,19 @@ import React from 'react';
 import { View, ScrollView, StyleSheet, Pressable, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '@/src/constants/colors';
+import { useTheme } from '@/src/hooks/useTheme';
 import { Heading, Card, Caption } from '@/src/components/ui';
 import { useExercises } from '@/src/hooks/useExercises';
 
 export default function ExercisesScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { allExercises } = useExercises();
 
   const categories = [...new Set(allExercises.map((e) => e.category))];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -22,7 +23,7 @@ export default function ExercisesScreen() {
 
         {categories.map((category) => (
           <View key={category} style={styles.section}>
-            <Text style={styles.categoryTitle}>
+            <Text style={[styles.categoryTitle, { color: theme.textSecondary }]}>
               {category.charAt(0).toUpperCase() + category.slice(1)}
             </Text>
             {allExercises
@@ -36,12 +37,14 @@ export default function ExercisesScreen() {
                 >
                   <Card style={styles.exerciseCard}>
                     <View style={styles.exerciseHeader}>
-                      <Text style={styles.exerciseName}>{exercise.name}</Text>
+                      <Text style={[styles.exerciseName, { color: theme.text }]}>
+                        {exercise.name}
+                      </Text>
                       <Caption>
                         {Math.ceil(exercise.durationSeconds / 60)} min
                       </Caption>
                     </View>
-                    <Text style={styles.exerciseDesc}>
+                    <Text style={[styles.exerciseDesc, { color: theme.textSecondary }]}>
                       {exercise.description}
                     </Text>
                     <View style={styles.meta}>
@@ -56,7 +59,10 @@ export default function ExercisesScreen() {
                             key={d}
                             style={[
                               styles.dot,
-                              d <= exercise.difficulty && styles.dotActive,
+                              { backgroundColor: theme.border },
+                              d <= exercise.difficulty && {
+                                backgroundColor: theme.primary,
+                              },
                             ]}
                           />
                         ))}
@@ -73,14 +79,13 @@ export default function ExercisesScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.light.background },
+  safe: { flex: 1 },
   container: { flex: 1 },
   content: { padding: 20, gap: 16 },
   section: { gap: 8 },
   categoryTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.light.textSecondary,
     textTransform: 'capitalize',
     marginTop: 8,
   },
@@ -93,10 +98,9 @@ const styles = StyleSheet.create({
   exerciseName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.light.text,
     flex: 1,
   },
-  exerciseDesc: { fontSize: 14, color: Colors.light.textSecondary },
+  exerciseDesc: { fontSize: 14 },
   meta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -108,7 +112,5 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.light.border,
   },
-  dotActive: { backgroundColor: Colors.light.primary },
 });

@@ -1,19 +1,37 @@
-import React from 'react';
-import { Text, StyleSheet, TextStyle } from 'react-native';
+import React, { useEffect } from 'react';
+import { TextStyle } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/useTheme';
 
 interface BodyTextProps {
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'muted';
+  animated?: boolean;
   style?: TextStyle;
 }
 
 export function BodyText({
   children,
   variant = 'primary',
+  animated = false,
   style,
 }: BodyTextProps) {
   const theme = useTheme();
+  const opacity = useSharedValue(animated ? 0 : 1);
+
+  useEffect(() => {
+    if (animated) {
+      opacity.value = withTiming(1, { duration: 300 });
+    }
+  }, [animated, opacity]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
 
   const colorMap = {
     primary: theme.text,
@@ -22,14 +40,12 @@ export function BodyText({
   };
 
   return (
-    <Text style={[styles.base, { color: colorMap[variant] }, style]}>
+    <Animated.Text
+      style={[{ fontSize: 16, lineHeight: 24 }, { color: colorMap[variant] }, animStyle, style]}
+    >
       {children}
-    </Text>
+    </Animated.Text>
   );
 }
-
-const styles = StyleSheet.create({
-  base: { fontSize: 16, lineHeight: 24 },
-});
 
 export default BodyText;

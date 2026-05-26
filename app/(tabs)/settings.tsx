@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Text, Pressable, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '@/src/constants/colors';
+import { useTheme } from '@/src/hooks/useTheme';
 import { Heading, Card } from '@/src/components/ui';
 import { useSubscription } from '@/src/hooks/useSubscription';
 
 export default function SettingsScreen() {
+  const theme = useTheme();
   const { isPremium, restore } = useSubscription();
 
   const settingsItems = [
@@ -22,7 +23,7 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -36,28 +37,39 @@ export default function SettingsScreen() {
               onPress={item.onPress}
               style={[
                 styles.row,
-                index < settingsItems.length - 1 && styles.rowBorder,
+                index < settingsItems.length - 1 && [
+                  styles.rowBorder,
+                  { borderBottomColor: theme.border },
+                ],
               ]}
             >
-              <Text style={styles.rowLabel}>{item.label}</Text>
+              <Text style={[styles.rowLabel, { color: theme.text }]}>
+                {item.label}
+              </Text>
               {item.value && (
-                <Text style={styles.rowValue}>{item.value}</Text>
+                <Text style={[styles.rowValue, { color: theme.textMuted }]}>
+                  {item.value}
+                </Text>
               )}
               {item.onPress && !item.value && (
-                <Text style={styles.rowArrow}>›</Text>
+                <Text style={[styles.rowArrow, { color: theme.textMuted }]}>
+                  ›
+                </Text>
               )}
             </Pressable>
           ))}
         </Card>
 
-        <Text style={styles.version}>JawEase v1.0.0</Text>
+        <Text style={[styles.version, { color: theme.textMuted }]}>
+          JawEase v1.0.0
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.light.background },
+  safe: { flex: 1 },
   container: { flex: 1 },
   content: { padding: 20, gap: 16 },
   row: {
@@ -68,15 +80,13 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.light.border,
   },
-  rowLabel: { fontSize: 16, color: Colors.light.text },
-  rowValue: { fontSize: 16, color: Colors.light.textMuted },
-  rowArrow: { fontSize: 20, color: Colors.light.textMuted },
+  rowLabel: { fontSize: 16 },
+  rowValue: { fontSize: 16 },
+  rowArrow: { fontSize: 20 },
   version: {
     textAlign: 'center',
     fontSize: 13,
-    color: Colors.light.textMuted,
     marginTop: 20,
   },
 });

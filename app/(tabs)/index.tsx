@@ -96,7 +96,7 @@ export default function TodayScreen() {
                   </Caption>
                 </View>
               ))}
-              <View style={styles.routineMeta}>
+              <View style={[styles.routineMeta, { borderTopColor: theme.border }]}>
                 <Caption muted>
                   {todayExercises.length} exercises · ~{totalMinutes} min
                 </Caption>
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: undefined, // set dynamically via theme
   },
   completedCard: {
     flexDirection: 'row',
