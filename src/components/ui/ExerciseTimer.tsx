@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import Animated, {
@@ -17,6 +17,12 @@ interface ExerciseTimerProps {
   onComplete: () => void;
   exerciseName?: string;
   autoStart?: boolean;
+  /** Controlled pause — overrides internal running state */
+  isPaused?: boolean;
+  /** Notify parent when user taps to pause/resume */
+  onPauseChange?: (paused: boolean) => void;
+  /** Called each second with remaining time */
+  onTick?: (remaining: number) => void;
 }
 
 const RING_RADIUS = 120;
@@ -30,30 +36,41 @@ export function ExerciseTimer({
   onComplete,
   exerciseName,
   autoStart = false,
+  isPaused,
+  onPauseChange,
+  onTick,
 }: ExerciseTimerProps) {
   const theme = useTheme();
   const [remaining, setRemaining] = useState(durationSeconds);
   const [running, setRunning] = useState(autoStart);
   const progress = useSharedValue(0);
 
-  useEffect(() => {
-    if (!running || remaining <= 0) return;
+  // Refs for callbacks to avoid stale closures in timer
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; });
+  const onTickRef = useRef(onTick);
+  useEffect(() => { onTickRef.current = onTick; });
 
-    const interval = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setRunning(false);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          onComplete();
-          return 0;
-        }
-        return prev - 1;
-      });
+  const effectivelyRunning = running && !(isPaused ?? false);
+
+  useEffect(() => {
+    if (!effectivelyRunning || remaining <= 0) return;
+
+    const timer = setTimeout(() => {
+      const next = remaining - 1;
+      if (next <= 0) {
+        setRemaining(0);
+        setRunning(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        onCompleteRef.current();
+      } else {
+        setRemaining(next);
+        onTickRef.current?.(next);
+      }
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [running, remaining, onComplete]);
+    return () => clearTimeout(timer);
+  }, [effectivelyRunning, remaining]);
 
   // Animate progress ring smoothly
   useEffect(() => {
@@ -74,6 +91,10 @@ export function ExerciseTimer({
 
   const toggleTimer = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onPauseChange) {
+      onPauseChange(!(isPaused ?? !running));
+      return;
+    }
     if (remaining <= 0) {
       setRemaining(durationSeconds);
       progress.value = 0;
@@ -81,12 +102,18 @@ export function ExerciseTimer({
     } else {
       setRunning((prev) => !prev);
     }
-  }, [remaining, durationSeconds, progress]);
+  }, [remaining, durationSeconds, progress, isPaused, running, onPauseChange]);
 
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const cx = SVG_SIZE / 2;
   const cy = SVG_SIZE / 2;
+
+  const actionText = remaining <= 0
+    ? 'Restart'
+    : effectivelyRunning
+      ? 'Tap to pause'
+      : 'Tap to start';
 
   return (
     <View style={styles.container}>
@@ -138,7 +165,7 @@ export function ExerciseTimer({
               {minutes}:{seconds.toString().padStart(2, '0')}
             </Text>
             <Text style={[styles.action, { color: theme.textMuted }]}>
-              {remaining <= 0 ? 'Restart' : running ? 'Tap to pause' : 'Tap to start'}
+              {actionText}
             </Text>
           </View>
         </View>
