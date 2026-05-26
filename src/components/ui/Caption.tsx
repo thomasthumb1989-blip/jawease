@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Fonts } from '@/src/constants/fonts';
 
 interface CaptionProps {
   children: React.ReactNode;
@@ -36,7 +37,7 @@ export function Caption({
   return (
     <Animated.Text
       style={[
-        { fontSize: 13, lineHeight: 18 },
+        { fontSize: 13, lineHeight: 18, fontFamily: Fonts.body },
         { color: muted ? theme.textMuted : theme.textSecondary },
         animStyle,
         style,

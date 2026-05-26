@@ -8,6 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Fonts } from '@/src/constants/fonts';
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
@@ -19,7 +20,7 @@ interface ProgressRingProps {
   label?: string;
 }
 
-export function ProgressRing({
+export const ProgressRing = React.memo(function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 8,
@@ -84,7 +85,7 @@ export function ProgressRing({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { position: 'relative' },
@@ -100,6 +101,7 @@ const styles = StyleSheet.create({
   percentage: {
     fontSize: 18,
     fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   label: {
     fontSize: 10,
@@ -108,3 +110,4 @@ const styles = StyleSheet.create({
 });
 
 export default ProgressRing;
+ProgressRing.displayName = 'ProgressRing';

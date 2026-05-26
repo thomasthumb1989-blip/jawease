@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Fonts } from '@/src/constants/fonts';
 
 interface PainOrbProps {
   level: number;
@@ -40,7 +41,7 @@ function getPainLabel(level: number): string {
   return 'Extreme';
 }
 
-export function PainOrb({
+export const PainOrb = React.memo(function PainOrb({
   level,
   onLevelChange,
   size = 'large',
@@ -173,7 +174,7 @@ export function PainOrb({
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { alignItems: 'center', gap: 8 },
@@ -188,6 +189,7 @@ const styles = StyleSheet.create({
   number: {
     color: '#FFFFFF',
     fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   label: {
     fontSize: 14,
@@ -196,3 +198,4 @@ const styles = StyleSheet.create({
 });
 
 export default PainOrb;
+PainOrb.displayName = 'PainOrb';

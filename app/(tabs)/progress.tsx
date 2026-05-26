@@ -37,7 +37,9 @@ import {
   Caption,
   EmptyState,
   PaywallGate,
+  LoadingIndicator,
 } from '@/src/components/ui';
+import { Fonts } from '@/src/constants/fonts';
 import { useStreak } from '@/src/hooks/useStreak';
 import { usePainLog } from '@/src/hooks/usePainLog';
 import { useExerciseContext } from '@/src/contexts/ExerciseContext';
@@ -412,8 +414,8 @@ function ConfidenceBar({ value, color }: { value: number; color: string }) {
 export default function ProgressScreen() {
   const theme = useTheme();
   const { currentStreak, longestStreak } = useStreak();
-  const { logs } = usePainLog();
-  const { sessions } = useExerciseContext();
+  const { logs, loading: painLoading } = usePainLog();
+  const { sessions, loading: exerciseLoading } = useExerciseContext();
   const insights = useInsights();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -499,6 +501,14 @@ export default function ProgressScreen() {
 
   // Flame scale
   const flameSize = currentStreak >= 8 ? 32 : currentStreak >= 4 ? 24 : 18;
+
+  if (painLoading || exerciseLoading) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <LoadingIndicator />
+      </SafeAreaView>
+    );
+  }
 
   const hasEnoughData = logs.length >= 1;
 
@@ -710,8 +720,8 @@ const styles = StyleSheet.create({
   // Hero
   heroCard: { alignItems: 'center', gap: 4 },
   heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  heroNumber: { fontSize: 48, fontWeight: '700' },
-  heroArrow: { fontSize: 32, fontWeight: '700' },
+  heroNumber: { fontSize: 48, fontWeight: '700', fontFamily: Fonts.heading },
+  heroArrow: { fontSize: 32, fontWeight: '700', fontFamily: Fonts.heading },
 
   // Streak
   streakRow: {
@@ -722,7 +732,7 @@ const styles = StyleSheet.create({
   },
   streakLeft: { alignItems: 'center', gap: 2 },
   streakRight: {},
-  streakNum: { fontSize: 40, fontWeight: '700' },
+  streakNum: { fontSize: 40, fontWeight: '700', fontFamily: Fonts.heading },
   streakLabel: { fontSize: 14, fontWeight: '600' },
   heatmapContainer: { alignItems: 'center' },
 

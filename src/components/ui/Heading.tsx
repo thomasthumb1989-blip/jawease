@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Fonts } from '@/src/constants/fonts';
 
 interface HeadingProps {
   children: React.ReactNode;
@@ -15,9 +16,9 @@ interface HeadingProps {
 }
 
 const SIZES = {
-  1: { fontSize: 28, lineHeight: 36, fontWeight: '700' as const },
-  2: { fontSize: 22, lineHeight: 30, fontWeight: '600' as const },
-  3: { fontSize: 18, lineHeight: 26, fontWeight: '600' as const },
+  1: { fontSize: 28, lineHeight: 36, fontFamily: Fonts.heading },
+  2: { fontSize: 22, lineHeight: 30, fontFamily: Fonts.headingSemiBold },
+  3: { fontSize: 18, lineHeight: 26, fontFamily: Fonts.headingSemiBold },
 };
 
 export function Heading({
@@ -42,7 +43,7 @@ export function Heading({
   return (
     <Animated.Text
       style={[
-        { color: theme.text, ...SIZES[level] },
+        { color: theme.text, fontWeight: level === 1 ? '700' : '600', ...SIZES[level] },
         animStyle,
         style,
       ]}

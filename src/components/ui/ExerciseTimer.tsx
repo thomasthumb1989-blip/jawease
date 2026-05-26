@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Fonts } from '@/src/constants/fonts';
 
 const AnimatedCircle = Animated.createAnimatedComponent(SvgCircle);
 
@@ -31,7 +32,7 @@ const GLOW_STROKE = 12;
 const SVG_SIZE = (RING_RADIUS + STROKE_WIDTH + 4) * 2;
 const CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-export function ExerciseTimer({
+export const ExerciseTimer = React.memo(function ExerciseTimer({
   durationSeconds,
   onComplete,
   exerciseName,
@@ -178,7 +179,7 @@ export function ExerciseTimer({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { alignItems: 'center', gap: 16 },
@@ -190,6 +191,7 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 48,
     fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   action: {
     fontSize: 14,
@@ -201,3 +203,4 @@ const styles = StyleSheet.create({
 });
 
 export default ExerciseTimer;
+ExerciseTimer.displayName = 'ExerciseTimer';

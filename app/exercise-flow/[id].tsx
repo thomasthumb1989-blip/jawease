@@ -77,7 +77,6 @@ function CountdownOverlay({ onComplete }: { onComplete: () => void }) {
         clearTimeout(nextTimer);
       };
     } else {
-      // TODO: Play chime sound via expo-av (assets/audio/chime.mp3)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onComplete();
     }

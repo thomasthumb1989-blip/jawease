@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '@/src/hooks/useTheme';
+import { Fonts } from '@/src/constants/fonts';
 
 interface BodyTextProps {
   children: React.ReactNode;
@@ -41,7 +42,12 @@ export function BodyText({
 
   return (
     <Animated.Text
-      style={[{ fontSize: 16, lineHeight: 24 }, { color: colorMap[variant] }, animStyle, style]}
+      style={[
+        { fontSize: 16, lineHeight: 24, fontFamily: Fonts.body },
+        { color: colorMap[variant] },
+        animStyle,
+        style,
+      ]}
     >
       {children}
     </Animated.Text>

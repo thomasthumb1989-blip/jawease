@@ -29,8 +29,10 @@ import {
   Button,
   Caption,
   PaywallGate,
+  LoadingIndicator,
 } from '@/src/components/ui';
 import { useUserContext } from '@/src/contexts/UserContext';
+import { useExerciseContext } from '@/src/contexts/ExerciseContext';
 import { useStreak } from '@/src/hooks/useStreak';
 import { usePainLog } from '@/src/hooks/usePainLog';
 import { useExercises } from '@/src/hooks/useExercises';
@@ -130,14 +132,17 @@ function TipCard() {
 export default function TodayScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { profile } = useUserContext();
+  const { profile, loading: profileLoading } = useUserContext();
+  const { loading: exerciseLoading } = useExerciseContext();
   const { currentStreak, isActiveToday } = useStreak();
-  const { todayAverage, logs } = usePainLog();
+  const { todayAverage, logs, loading: painLoading } = usePainLog();
   const { todayExercises, todayCompleted, completedToday, routineDuration } =
     useExercises();
   const insights = useInsights();
 
   const [refreshing, setRefreshing] = useState(false);
+
+  const dataLoading = profileLoading || exerciseLoading || painLoading;
 
   const painLevel = todayAverage();
   const totalMinutes = Math.ceil(routineDuration / 60);
@@ -161,6 +166,14 @@ export default function TodayScreen() {
     // Force re-render by toggling state — hooks will re-evaluate
     setTimeout(() => setRefreshing(false), 600);
   }, []);
+
+  if (dataLoading) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <LoadingIndicator />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
