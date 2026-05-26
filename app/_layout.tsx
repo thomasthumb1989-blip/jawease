@@ -1,10 +1,14 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
+import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 import { UserProvider, useUserContext } from '@/src/contexts/UserContext';
 import { ExerciseProvider } from '@/src/contexts/ExerciseContext';
 import { SubscriptionProvider } from '@/src/contexts/SubscriptionContext';
+import { AppErrorBoundary } from '@/src/components/ErrorBoundary';
+import { setupNotifications } from '@/src/utils/notifications';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -18,7 +22,33 @@ function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const { onboardingComplete, loading } = useUserContext();
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
+  // ── Notification setup (once) ──
+  useEffect(() => {
+    setupNotifications();
+  }, []);
+
+  // ── Handle notification taps ──
+  useEffect(() => {
+    responseListener.current =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined;
+        const route = data?.route;
+        if (typeof route === 'string') {
+          // Small delay so navigation stack is ready
+          setTimeout(() => router.push(route as never), 300);
+        }
+      });
+
+    return () => {
+      responseListener.current?.remove();
+    };
+  }, [router]);
+
+  // ── Auth routing ──
   useEffect(() => {
     if (loading) return;
 
@@ -54,12 +84,14 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <SubscriptionProvider>
-      <UserProvider>
-        <ExerciseProvider>
-          <RootNavigator />
-        </ExerciseProvider>
-      </UserProvider>
-    </SubscriptionProvider>
+    <AppErrorBoundary>
+      <SubscriptionProvider>
+        <UserProvider>
+          <ExerciseProvider>
+            <RootNavigator />
+          </ExerciseProvider>
+        </UserProvider>
+      </SubscriptionProvider>
+    </AppErrorBoundary>
   );
 }

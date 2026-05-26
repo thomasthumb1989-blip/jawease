@@ -10,6 +10,7 @@ import {
   Linking,
   Modal,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +23,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@/src/hooks/useTheme';
 import { Strings } from '@/src/constants/strings';
@@ -35,6 +38,16 @@ import {
 } from '@/src/components/ui';
 import { useUserContext } from '@/src/contexts/UserContext';
 import { useSubscription } from '@/src/hooks/useSubscription';
+import { useExerciseContext } from '@/src/contexts/ExerciseContext';
+import { usePainLog } from '@/src/hooks/usePainLog';
+import { useStreak } from '@/src/hooks/useStreak';
+import { useInsights } from '@/src/hooks/useInsights';
+import {
+  scheduleDailyReminder,
+  schedulePainCheckIn,
+  cancelNotificationsByType,
+} from '@/src/utils/notifications';
+import { generateReport } from '@/src/utils/report';
 import type { Symptom, Difficulty } from '@/src/types';
 
 const PRIVACY_URL =
@@ -350,10 +363,15 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const { profile, updateProfile, setOnboardingComplete } = useUserContext();
   const { status, isPremium, restore } = useSubscription();
+  const { sessions } = useExerciseContext();
+  const { logs: painLogs } = usePainLog();
+  const { currentStreak } = useStreak();
+  const insights = useInsights();
   const S = Strings.settings;
 
   const [symptomModalOpen, setSymptomModalOpen] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Preference values with defaults
   const difficulty = profile?.difficulty ?? 'easy';
@@ -538,12 +556,30 @@ export default function SettingsScreen() {
             <ToggleRow
               label={S.dailyReminder}
               value={reminderEnabled}
-              onChange={(v) => updateProfile({ reminderEnabled: v })}
+              onChange={async (v) => {
+                updateProfile({ reminderEnabled: v });
+                if (v) {
+                  // Default 8 AM reminder
+                  const t = profile?.reminderTime
+                    ? new Date(`2000-01-01T${profile.reminderTime}`)
+                    : new Date(2000, 0, 1, 8, 0);
+                  await scheduleDailyReminder(t);
+                } else {
+                  await cancelNotificationsByType('exercise_reminder');
+                }
+              }}
             />
             <ToggleRow
               label={S.painReminder}
               value={painReminderEnabled}
-              onChange={(v) => updateProfile({ painReminderEnabled: v })}
+              onChange={async (v) => {
+                updateProfile({ painReminderEnabled: v });
+                if (v) {
+                  await schedulePainCheckIn(true, true);
+                } else {
+                  await cancelNotificationsByType('pain_checkin');
+                }
+              }}
               isLast
             />
           </Card>
@@ -555,7 +591,29 @@ export default function SettingsScreen() {
           <Card>
             <SettingRow
               label={S.exportReport}
-              caption={S.comingSoon}
+              value={exporting ? '...' : undefined}
+              onPress={async () => {
+                setExporting(true);
+                try {
+                  const html = generateReport({
+                    painLogs,
+                    sessions,
+                    insights,
+                    symptoms: profile?.symptoms ?? [],
+                    streakDays: currentStreak,
+                  });
+                  const { uri } = await Print.printToFileAsync({ html });
+                  await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Share Doctor Report',
+                    UTI: 'com.adobe.pdf',
+                  });
+                } catch {
+                  Alert.alert('Export failed', 'Could not generate the report.');
+                } finally {
+                  setExporting(false);
+                }
+              }}
             />
             <SettingRow
               label={S.clearData}
