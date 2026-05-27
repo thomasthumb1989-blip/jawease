@@ -87,14 +87,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         }
 
         // Fetch initial state in parallel
-        const [info, offers] = await Promise.all([
+        const [info, offerings] = await Promise.all([
           Purchases.getCustomerInfo(),
           Purchases.getOfferings(),
         ]);
 
         if (cancelled) return;
         setStatus(statusFromCustomerInfo(info));
-        setOfferings(offers);
+        const offering = offerings.all["jawease_pro"] || offerings.current;
+        setOfferings({ ...offerings, current: offering });
       } catch (e: unknown) {
         if (cancelled) return;
         // RevenueCat failed → app still works in preview mode
