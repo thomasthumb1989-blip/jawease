@@ -43,7 +43,7 @@ export const Strings = {
       'Weekly progress reports',
       'Priority support',
     ],
-    paywallCta: 'Start Free Trial — 3 Days Free',
+    paywallCta: 'Continue',
     paywallDismiss: 'Maybe later',
     paywallRestore: 'Restore Purchases',
     paywallRestoreNone: 'No previous purchases found.',

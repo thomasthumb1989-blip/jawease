@@ -28,17 +28,17 @@ import { useSubscription } from '@/src/hooks/useSubscription';
 import { trackEvent } from '@/src/utils/analytics';
 
 // ─── Map RevenueCat package identifiers to display ──────
-const PACKAGE_META: Record<string, { label: string; badge?: string }> = {
-  $rc_monthly: { label: 'Monthly' },
-  $rc_annual: { label: 'Annual', badge: 'SAVE 50%' },
-  $rc_lifetime: { label: 'Lifetime' },
+const PACKAGE_META: Record<string, { label: string; badge?: string; trialTerms: (price: string) => string }> = {
+  $rc_monthly: { label: 'Monthly', trialTerms: (p) => `3-day free trial, then ${p}/mo` },
+  $rc_annual: { label: 'Annual', badge: 'SAVE 50%', trialTerms: (p) => `3-day free trial, then ${p}/yr` },
+  $rc_lifetime: { label: 'Lifetime', trialTerms: () => 'One-time purchase' },
 };
 
 // Fallback static plans when offerings unavailable
 const FALLBACK_PLANS = [
-  { label: 'Monthly', price: Strings.onboarding.paywallMonthly, id: '$rc_monthly' },
-  { label: 'Annual', price: Strings.onboarding.paywallAnnual, id: '$rc_annual', badge: Strings.onboarding.paywallAnnualBadge },
-  { label: 'Lifetime', price: Strings.onboarding.paywallLifetime, id: '$rc_lifetime' },
+  { label: 'Monthly', price: Strings.onboarding.paywallMonthly, id: '$rc_monthly', trialTerms: '3-day free trial, then £4.99/mo' },
+  { label: 'Annual', price: Strings.onboarding.paywallAnnual, id: '$rc_annual', badge: Strings.onboarding.paywallAnnualBadge, trialTerms: '3-day free trial, then £29.99/yr' },
+  { label: 'Lifetime', price: Strings.onboarding.paywallLifetime, id: '$rc_lifetime', trialTerms: 'One-time purchase' },
 ];
 
 // ─── Benefit row with slide-in ──────────────────────────
@@ -156,6 +156,7 @@ export default function PaywallScreen() {
     price: string,
     badge: string | undefined,
     index: number,
+    trialTerms: string,
   ) => {
     const active = selectedIdx === index;
     return (
@@ -191,11 +192,14 @@ export default function PaywallScreen() {
             styles.planPrice,
             {
               color: active ? theme.text : theme.textSecondary,
-              fontWeight: active ? '700' : '500',
+              fontWeight: '700',
             },
           ]}
         >
           {price}
+        </Text>
+        <Text style={{ fontSize: 11, color: theme.textMuted, textAlign: 'center' }}>
+          {trialTerms}
         </Text>
       </Pressable>
     );
@@ -252,6 +256,7 @@ export default function PaywallScreen() {
                 ? packages.map((pkg: PurchasesPackage, i: number) => {
                     const meta = PACKAGE_META[pkg.identifier] ?? {
                       label: pkg.packageType ?? pkg.identifier,
+                      trialTerms: () => '',
                     };
                     return renderPlanCard(
                       pkg.identifier,
@@ -259,13 +264,28 @@ export default function PaywallScreen() {
                       pkg.product.priceString,
                       meta.badge,
                       i,
+                      meta.trialTerms(pkg.product.priceString),
                     );
                   })
                 : FALLBACK_PLANS.map((p, i) =>
-                    renderPlanCard(p.id, p.label, p.price, p.badge, i),
+                    renderPlanCard(p.id, p.label, p.price, p.badge, i, p.trialTerms),
                   )}
             </View>
           )}
+
+          <Text
+            style={{
+              fontSize: 12,
+              color: theme.textMuted,
+              textAlign: 'center',
+              paddingHorizontal: 16,
+            }}
+          >
+            After your 3-day free trial, your subscription will automatically
+            renew at the price shown above. Cancel anytime in Settings {'>'}{' '}
+            Apple ID {'>'} Subscriptions at least 24 hours before the current
+            period ends. Payment is charged to your Apple ID account.
+          </Text>
 
           {errorMsg && (
             <Caption style={{ color: theme.error, textAlign: 'center' }}>
@@ -344,7 +364,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   planLabel: { fontSize: 13, marginTop: 12 },
-  planPrice: { fontSize: 15 },
+  planPrice: { fontSize: 18 },
   footer: { padding: 24, paddingTop: 8, gap: 12 },
   restoreButton: { alignItems: 'center', paddingVertical: 8 },
   restoreText: { fontSize: 14 },
