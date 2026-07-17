@@ -5,6 +5,6 @@ export interface Source {
 
 export const sources: Source[] = [
   { name: 'The TMJ Association', url: 'https://tmj.org' },
-  { name: 'NHS — Temporomandibular disorder (TMD)', url: 'https://www.nhs.uk/conditions/temporomandibular-disorder-tmd/' },
+  { name: 'NHS — Temporomandibular Disorders (TMD)', url: 'https://www.leedsth.nhs.uk/patients/resources/temporomandibular-disorders-tmd/' },
   { name: 'Chartered Society of Physiotherapy', url: 'https://www.csp.org.uk' },
 ];
