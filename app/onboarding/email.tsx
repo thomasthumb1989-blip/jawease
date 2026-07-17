@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '@/src/hooks/useTheme';
 import { Strings } from '@/src/constants/strings';
 import {
@@ -37,6 +38,12 @@ export default function EmailScreen() {
     router.push('/onboarding/paywall');
   };
 
+  // Skip: never save or submit an email — always available regardless of input.
+  const handleSkip = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push('/onboarding/paywall');
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <View style={styles.container}>
@@ -58,12 +65,19 @@ export default function EmailScreen() {
           <Caption muted>{Strings.onboarding.emailCaption}</Caption>
         </View>
 
-        <Button
-          title={Strings.onboarding.emailCta}
-          onPress={handleContinue}
-          disabled={!isValid}
-          loading={submitting}
-        />
+        <View style={styles.footer}>
+          <Button
+            title={Strings.onboarding.emailCta}
+            onPress={handleContinue}
+            disabled={!isValid}
+            loading={submitting}
+          />
+          <Pressable onPress={handleSkip} style={styles.skip} hitSlop={8}>
+            <BodyText variant="secondary" style={styles.skipText}>
+              {Strings.onboarding.emailSkip}
+            </BodyText>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -73,4 +87,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flex: 1, padding: 24, justifyContent: 'space-between' },
   content: { gap: 20 },
+  footer: { gap: 12 },
+  skip: { alignItems: 'center', paddingVertical: 8 },
+  skipText: { textAlign: 'center', fontWeight: '600' },
 });

@@ -361,6 +361,9 @@ export default function ExerciseFlowScreen() {
           </ScrollView>
 
           <View style={styles.footer}>
+            <Caption muted style={styles.disclaimerNotice}>
+              {Strings.disclaimer.exerciseNotice}
+            </Caption>
             <Button
               title={Strings.exerciseFlow.begin}
               onPress={handleBegin}
@@ -660,4 +663,5 @@ const styles = StyleSheet.create({
 
   // Shared
   footer: { padding: 24, gap: 8 },
+  disclaimerNotice: { textAlign: 'center', marginBottom: 4 },
 });

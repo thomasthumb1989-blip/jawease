@@ -673,6 +673,18 @@ export default function SettingsScreen() {
           <Heading level={3}>{S.legal}</Heading>
           <Card>
             <SettingRow
+              label={Strings.disclaimer.title}
+              onPress={() =>
+                Alert.alert(Strings.disclaimer.title, Strings.disclaimer.body, [
+                  { text: 'OK' },
+                ])
+              }
+            />
+            <SettingRow
+              label={Strings.disclaimer.sourcesTitle}
+              onPress={() => router.push('/sources')}
+            />
+            <SettingRow
               label={S.privacyPolicy}
               onPress={() => Linking.openURL(PRIVACY_URL)}
             />

@@ -85,6 +85,7 @@ function RootNavigator() {
         name="pain-log"
         options={{ presentation: 'modal' }}
       />
+      <Stack.Screen name="sources" />
     </Stack>
   );
 }
