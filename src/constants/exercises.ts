@@ -22,7 +22,7 @@ export const exercises: Exercise[] = [
   {
     id: 'resisted-opening',
     name: 'Resisted Opening',
-    description: 'Strengthen jaw muscles with gentle resistance.',
+    description: 'Gentle resistance to support jaw muscle comfort.',
     instructions: [
       'Place your thumb under your chin',
       'Slowly open your mouth while pushing gently against your chin',
