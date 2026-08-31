@@ -50,10 +50,23 @@ export const Strings = {
     paywallRestoreNone: 'No previous purchases found.',
     paywallRestoreFailed: 'Restore failed. Please try again.',
     paywallError: 'Something went wrong. Please try again.',
-    paywallMonthly: '£4.99/month',
-    paywallAnnual: '£29.99/year',
-    paywallAnnualBadge: 'SAVE 50%',
-    paywallLifetime: '£49.99 once',
+  },
+  // Paywall failure + recovery copy. The paywall is no longer an
+  // onboarding-only screen, so new keys live here rather than under
+  // `onboarding`. The existing `onboarding.paywall*` keys above should move
+  // here too, as a separate change.
+  paywall: {
+    unavailableTitle: 'Plans couldn’t be loaded',
+    unavailableBody:
+      'We couldn’t reach the App Store just now. Check your connection and try again.',
+    retry: 'Try Again',
+    retrying: 'Loading...',
+    // Shown in place of the raw SDK error string, which must never reach the UI.
+    purchaseFailed: 'The App Store couldn’t complete that. Please try again.',
+    // Onboarding-mode escape when plans cannot load — must be obvious, not an X.
+    continueWithoutPlan: 'Continue without subscribing',
+    // Upgrade-mode escape when plans cannot load.
+    dismissUnavailable: 'Not now',
   },
   symptoms: {
     jaw_pain: 'Jaw Pain',

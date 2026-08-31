@@ -27,6 +27,7 @@ interface SubscriptionState {
   offerings: PurchasesOfferings | null;
   purchase: (pkg: PurchasesPackage) => Promise<boolean>;
   restore: () => Promise<boolean>;
+  refresh: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionState>({
@@ -37,6 +38,7 @@ const SubscriptionContext = createContext<SubscriptionState>({
   offerings: null,
   purchase: async () => false,
   restore: async () => false,
+  refresh: async () => {},
 });
 
 // ─── Provider ────────────────────────────────────────────
@@ -46,69 +48,79 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [error, setError] = useState<string | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
   const configured = useRef(false);
+  const mounted = useRef(true);
 
-  // ── Init RevenueCat ──
   useEffect(() => {
-    let cancelled = false;
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
-    async function init() {
-      const apiKey = Platform.select({
-        ios: Config.revenueCat.iosKey,
-        android: Config.revenueCat.androidKey,
-        default: '',
-      }) as string;
+  // ── Init / refresh RevenueCat ──
+  // Callable so the paywall can retry a failed fetch. Resolves only once the
+  // fetch has settled, so callers can await it to gate a retry button.
+  const refresh = useCallback(async (): Promise<void> => {
+    // Clear any prior error first, or a stale message survives a successful
+    // retry and the user is told it failed when it did not.
+    setError(null);
+    setLoading(true);
 
-      // Guard: no key → preview mode (never crash)
-      if (!apiKey) {
-        // Web-only: allow localStorage override for dev/screenshots
-        if (Platform.OS === 'web') {
-          try {
-            const override = window.localStorage.getItem('jawease_subscription_override');
-            if (override === 'active' || override === 'trial') {
-              if (!cancelled) {
-                setStatus(override as SubscriptionStatus);
-                setLoading(false);
-              }
-              return;
+    const apiKey = Platform.select({
+      ios: Config.revenueCat.iosKey,
+      android: Config.revenueCat.androidKey,
+      default: '',
+    }) as string;
+
+    // Guard: no key → preview mode (never crash)
+    if (!apiKey) {
+      // Web-only: allow localStorage override for dev/screenshots
+      if (Platform.OS === 'web') {
+        try {
+          const override = window.localStorage.getItem('jawease_subscription_override');
+          if (override === 'active' || override === 'trial') {
+            if (mounted.current) {
+              setStatus(override as SubscriptionStatus);
+              setLoading(false);
             }
-          } catch { /* ignore */ }
-        }
-        if (!cancelled) {
-          setStatus('preview');
-          setLoading(false);
-        }
-        return;
+            return;
+          }
+        } catch { /* ignore */ }
       }
-
-      try {
-        if (!configured.current) {
-          Purchases.configure({ apiKey });
-          configured.current = true;
-        }
-
-        // Fetch initial state in parallel
-        const [info, offerings] = await Promise.all([
-          Purchases.getCustomerInfo(),
-          Purchases.getOfferings(),
-        ]);
-
-        if (cancelled) return;
-        setStatus(statusFromCustomerInfo(info));
-        const offering = offerings.all["jawease_pro"] || offerings.current;
-        setOfferings({ ...offerings, current: offering });
-      } catch (e: unknown) {
-        if (cancelled) return;
-        // RevenueCat failed → app still works in preview mode
+      if (mounted.current) {
         setStatus('preview');
-        setError(e instanceof Error ? e.message : 'RevenueCat init failed');
-      } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
+      return;
     }
 
-    init();
-    return () => { cancelled = true; };
+    try {
+      if (!configured.current) {
+        Purchases.configure({ apiKey });
+        configured.current = true;
+      }
+
+      // Fetch initial state in parallel
+      const [info, offerings] = await Promise.all([
+        Purchases.getCustomerInfo(),
+        Purchases.getOfferings(),
+      ]);
+
+      if (!mounted.current) return;
+      setStatus(statusFromCustomerInfo(info));
+      const offering = offerings.all["jawease_pro"] || offerings.current;
+      setOfferings({ ...offerings, current: offering });
+    } catch (e: unknown) {
+      if (!mounted.current) return;
+      // RevenueCat failed → app still works in preview mode
+      setStatus('preview');
+      setError(e instanceof Error ? e.message : 'RevenueCat init failed');
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   // ── Listen for customer info changes ──
   useEffect(() => {
@@ -158,7 +170,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   return (
     <SubscriptionContext.Provider
-      value={{ status, isPremium, loading, error, offerings, purchase, restore }}
+      value={{ status, isPremium, loading, error, offerings, purchase, restore, refresh }}
     >
       {children}
     </SubscriptionContext.Provider>

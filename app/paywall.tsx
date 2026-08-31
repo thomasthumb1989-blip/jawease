@@ -34,13 +34,6 @@ const PACKAGE_META: Record<string, { label: string; badge?: string; trialTerms: 
   $rc_lifetime: { label: 'Lifetime', trialTerms: () => 'One-time purchase' },
 };
 
-// Fallback static plans when offerings unavailable
-const FALLBACK_PLANS = [
-  { label: 'Monthly', price: Strings.onboarding.paywallMonthly, id: '$rc_monthly', trialTerms: '3-day free trial, then £4.99/mo' },
-  { label: 'Annual', price: Strings.onboarding.paywallAnnual, id: '$rc_annual', badge: Strings.onboarding.paywallAnnualBadge, trialTerms: '3-day free trial, then £29.99/yr' },
-  { label: 'Lifetime', price: Strings.onboarding.paywallLifetime, id: '$rc_lifetime', trialTerms: 'One-time purchase' },
-];
-
 // ─── Benefit row with slide-in ──────────────────────────
 function BenefitRow({ text, delay }: { text: string; delay: number }) {
   const theme = useTheme();
@@ -72,7 +65,14 @@ export default function PaywallScreen() {
   const theme = useTheme();
   const { completeOnboarding } = useOnboarding();
   const { profile, onboardingComplete } = useUserContext();
-  const { offerings, purchase, restore, loading: subLoading } = useSubscription();
+  const {
+    offerings,
+    purchase,
+    restore,
+    refresh,
+    loading: subLoading,
+    error: subError,
+  } = useSubscription();
   const params = useLocalSearchParams<{ mode?: string | string[] }>();
 
   // ── Mode ──
@@ -100,18 +100,54 @@ export default function PaywallScreen() {
   const [selectedIdx, setSelectedIdx] = useState(1); // default annual
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     trackEvent('paywall_shown');
   }, []);
 
-  // Build plan list from RevenueCat offerings (fallback to static)
+  // Raw SDK text is for debugging only — never rendered. A reviewer seeing an
+  // unhandled StoreKit string reads it as a broken app.
+  useEffect(() => {
+    if (subError) console.warn('[paywall] RevenueCat error:', subError);
+  }, [subError]);
+
+  // Build plan list from RevenueCat offerings. There is no static fallback —
+  // no price may render that did not come from RevenueCat.
   const packages = useMemo(() => {
     const pkgs = offerings?.current?.availablePackages;
     if (!pkgs || pkgs.length === 0) return null;
     return pkgs;
   }, [offerings]);
+
+  // True only once the fetch has SETTLED and left us with nothing to sell.
+  // The !subLoading gate matters: packages are null during the initial fetch,
+  // so without it every user sees the unavailable state flash first.
+  // Covers all three failure cases, since the memo above returns null when the
+  // fetch threw (offerings stays null), resolved null/undefined, or resolved
+  // with zero packages. Deliberately not derived from the status enum.
+  const productsUnavailable = !subLoading && !packages;
+
+  // ── Error precedence ──
+  // Exactly one message renders. Local errorMsg wins: it is the direct result
+  // of the action the user just took, so it is more specific than the ambient
+  // context error. The context error only shows when there is no local one,
+  // and always as friendly copy — never the raw SDK string.
+  const displayError = errorMsg ?? (subError ? Strings.paywall.purchaseFailed : null);
+
+  const handleRetry = async () => {
+    // In-flight guard: without it, five taps fire five fetches.
+    if (refreshing) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setErrorMsg(null);
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const symptomNames = (profile?.symptoms ?? [])
     .slice(0, 3)
@@ -137,9 +173,10 @@ export default function PaywallScreen() {
         }
         trackEvent('paywall_purchased', { package: pkg.identifier });
       } else if (mode === 'upgrade') {
-        // No offerings to buy. In upgrade mode this is a no-op — never grant
-        // entry and never navigate. (Onboarding mode keeps its original
-        // fall-through below.)
+        // No offerings to buy. Never grant entry and never navigate — but say
+        // so. Defensive: the CTA is not rendered when productsUnavailable, so
+        // this should be unreachable. It must never stop silently if it is.
+        setErrorMsg(Strings.paywall.unavailableBody);
         setPurchasing(false);
         return;
       }
@@ -287,8 +324,29 @@ export default function PaywallScreen() {
             ))}
           </View>
 
-          {/* Price cards — real or fallback */}
-          {subLoading ? (
+          {/* Plans, or the unavailable state. Order matters: the retry branch
+              comes first so the block keeps its context while a refresh is in
+              flight, rather than collapsing to the bare initial spinner. */}
+          {refreshing || productsUnavailable ? (
+            <GlassCard>
+              <View style={styles.unavailable}>
+                <Heading level={3} style={{ textAlign: 'center' }}>
+                  {Strings.paywall.unavailableTitle}
+                </Heading>
+                <BodyText variant="secondary" style={{ textAlign: 'center' }}>
+                  {Strings.paywall.unavailableBody}
+                </BodyText>
+                <Button
+                  title={refreshing ? Strings.paywall.retrying : Strings.paywall.retry}
+                  onPress={handleRetry}
+                  variant="accent"
+                  size="md"
+                  disabled={refreshing}
+                  loading={refreshing}
+                />
+              </View>
+            </GlassCard>
+          ) : subLoading ? (
             <ActivityIndicator
               size="large"
               color="#FFFFFF"
@@ -296,61 +354,80 @@ export default function PaywallScreen() {
             />
           ) : (
             <View style={styles.plans}>
-              {packages
-                ? packages.map((pkg: PurchasesPackage, i: number) => {
-                    const meta = PACKAGE_META[pkg.identifier] ?? {
-                      label: pkg.packageType ?? pkg.identifier,
-                      trialTerms: () => '',
-                    };
-                    return renderPlanCard(
-                      pkg.identifier,
-                      meta.label,
-                      pkg.product.priceString,
-                      meta.badge,
-                      i,
-                      meta.trialTerms(pkg.product.priceString),
-                    );
-                  })
-                : FALLBACK_PLANS.map((p, i) =>
-                    renderPlanCard(p.id, p.label, p.price, p.badge, i, p.trialTerms),
-                  )}
+              {packages?.map((pkg: PurchasesPackage, i: number) => {
+                const meta = PACKAGE_META[pkg.identifier] ?? {
+                  label: pkg.packageType ?? pkg.identifier,
+                  trialTerms: () => '',
+                };
+                return renderPlanCard(
+                  pkg.identifier,
+                  meta.label,
+                  pkg.product.priceString,
+                  meta.badge,
+                  i,
+                  meta.trialTerms(pkg.product.priceString),
+                );
+              })}
             </View>
           )}
 
-          <Text
-            style={{
-              fontSize: 12,
-              color: theme.textMuted,
-              textAlign: 'center',
-              paddingHorizontal: 16,
-            }}
-          >
-            After your 3-day free trial, your subscription will automatically
-            renew at the price shown above. Cancel anytime in Settings {'>'}{' '}
-            Apple ID {'>'} Subscriptions at least 24 hours before the current
-            period ends. Payment is charged to your Apple ID account.
-          </Text>
+          {/* Renewal terms reference "the price shown above" — hide them when
+              no price is shown. */}
+          {!refreshing && !productsUnavailable && (
+            <Text
+              style={{
+                fontSize: 12,
+                color: theme.textMuted,
+                textAlign: 'center',
+                paddingHorizontal: 16,
+              }}
+            >
+              After your 3-day free trial, your subscription will automatically
+              renew at the price shown above. Cancel anytime in Settings {'>'}{' '}
+              Apple ID {'>'} Subscriptions at least 24 hours before the current
+              period ends. Payment is charged to your Apple ID account.
+            </Text>
+          )}
 
-          {errorMsg && (
+          {displayError && (
             <Caption style={{ color: theme.error, textAlign: 'center' }}>
-              {errorMsg}
+              {displayError}
             </Caption>
           )}
         </ScrollView>
 
         {/* CTA */}
         <View style={styles.footer}>
-          <Button
-            title={
-              purchasing
-                ? Strings.common.processing
-                : Strings.onboarding.paywallCta
-            }
-            onPress={handlePurchase}
-            variant="accent"
-            size="lg"
-            disabled={purchasing || restoring}
-          />
+          {refreshing || productsUnavailable ? (
+            // No purchase CTA when there is nothing to buy. The escape is a
+            // full-width labelled button, not just the corner X, so a first-run
+            // user hitting a transient failure can obviously get into the app.
+            // handleDismiss keeps its mode branching from the previous change:
+            // onboarding awaits completeOnboarding then replaces to tabs;
+            // upgrade uses dismiss() with its canGoBack fallback.
+            <Button
+              title={
+                mode === 'onboarding'
+                  ? Strings.paywall.continueWithoutPlan
+                  : Strings.paywall.dismissUnavailable
+              }
+              onPress={handleDismiss}
+              variant="secondary"
+              size="lg"
+            />
+          ) : (
+            <Button
+              title={
+                purchasing
+                  ? Strings.common.processing
+                  : Strings.onboarding.paywallCta
+              }
+              onPress={handlePurchase}
+              variant="accent"
+              size="lg"
+              disabled={purchasing || restoring}
+            />
+          )}
           <Pressable
             onPress={handleRestore}
             disabled={restoring}
@@ -387,6 +464,7 @@ const styles = StyleSheet.create({
   benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   checkIcon: { fontSize: 18, fontWeight: '700' },
   plans: { flexDirection: 'row', gap: 10 },
+  unavailable: { alignItems: 'stretch', gap: 12 },
   planCard: {
     flex: 1,
     paddingVertical: 16,
