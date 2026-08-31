@@ -18,7 +18,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import type { PurchasesPackage } from 'react-native-purchases';
+import { PACKAGE_TYPE, type PurchasesPackage } from 'react-native-purchases';
 import { useTheme } from '@/src/hooks/useTheme';
 import { Strings } from '@/src/constants/strings';
 import { Heading, BodyText, Button, GlassCard, Caption } from '@/src/components/ui';
@@ -97,7 +97,9 @@ export default function PaywallScreen() {
     }
   }, [router]);
 
-  const [selectedIdx, setSelectedIdx] = useState(1); // default annual
+  // Selection is keyed on the SDK's own PACKAGE_TYPE enum, never on array
+  // position: RevenueCat does not guarantee the order of availablePackages.
+  const [selectedType, setSelectedType] = useState<PACKAGE_TYPE | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -128,6 +130,30 @@ export default function PaywallScreen() {
   // fetch threw (offerings stays null), resolved null/undefined, or resolved
   // with zero packages. Deliberately not derived from the status enum.
   const productsUnavailable = !subLoading && !packages;
+
+  // Default selection: annual, resolved semantically rather than by position.
+  // Documented fallback: an offering with no annual package falls back to the
+  // first available package — a deliberate default, not a silent index slip.
+  const defaultType = useMemo<PACKAGE_TYPE | null>(() => {
+    if (!packages) return null;
+    const hasAnnual = packages.some((p) => p.packageType === PACKAGE_TYPE.ANNUAL);
+    return hasAnnual ? PACKAGE_TYPE.ANNUAL : packages[0]?.packageType ?? null;
+  }, [packages]);
+
+  // Reconcile selection whenever the package list changes (e.g. a successful
+  // Retry repopulating it). A still-present selection is a deliberate user
+  // choice and is kept; only a vanished one resets to the default.
+  useEffect(() => {
+    if (!packages) return;
+    const stillExists =
+      selectedType !== null && packages.some((p) => p.packageType === selectedType);
+    if (!stillExists) setSelectedType(defaultType);
+  }, [packages, defaultType, selectedType]);
+
+  const selectedPackage = useMemo(
+    () => packages?.find((p) => p.packageType === selectedType) ?? null,
+    [packages, selectedType],
+  );
 
   // ── Error precedence ──
   // Exactly one message renders. Local errorMsg wins: it is the direct result
@@ -164,7 +190,15 @@ export default function PaywallScreen() {
 
     try {
       if (packages) {
-        const pkg = packages[selectedIdx] ?? packages[0];
+        // No fallback to a different package. The old `?? packages[0]` could
+        // charge Monthly to someone who picked Lifetime; a mismatch here bills
+        // the wrong plan, so surface the error path instead of guessing.
+        if (!selectedPackage) {
+          setErrorMsg(Strings.paywall.purchaseFailed);
+          setPurchasing(false);
+          return;
+        }
+        const pkg = selectedPackage;
         const success = await purchase(pkg);
         if (!success) {
           // User cancelled or error — stay on screen
@@ -236,16 +270,18 @@ export default function PaywallScreen() {
     label: string,
     price: string,
     badge: string | undefined,
-    index: number,
+    packageType: PACKAGE_TYPE,
     trialTerms: string,
   ) => {
-    const active = selectedIdx === index;
+    // Highlight is driven by the same discriminator as the purchase lookup, so
+    // the highlighted card and the charged package cannot diverge.
+    const active = selectedType === packageType;
     return (
       <Pressable
         key={id}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setSelectedIdx(index);
+          setSelectedType(packageType);
         }}
         style={[
           styles.planCard,
@@ -354,7 +390,7 @@ export default function PaywallScreen() {
             />
           ) : (
             <View style={styles.plans}>
-              {packages?.map((pkg: PurchasesPackage, i: number) => {
+              {packages?.map((pkg: PurchasesPackage) => {
                 const meta = PACKAGE_META[pkg.identifier] ?? {
                   label: pkg.packageType ?? pkg.identifier,
                   trialTerms: () => '',
@@ -364,7 +400,7 @@ export default function PaywallScreen() {
                   meta.label,
                   pkg.product.priceString,
                   meta.badge,
-                  i,
+                  pkg.packageType,
                   meta.trialTerms(pkg.product.priceString),
                 );
               })}
