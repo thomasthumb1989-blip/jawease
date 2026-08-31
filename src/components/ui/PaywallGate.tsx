@@ -1,5 +1,12 @@
-import React from 'react';
-import { View, StyleSheet, Pressable, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  Pressable,
+  Platform,
+  ActivityIndicator,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { useTheme, useColorSchemeValue } from '@/src/hooks/useTheme';
@@ -18,6 +25,24 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
   const scheme = useColorSchemeValue();
   const { isPremium, status } = useSubscriptionContext();
   const router = useRouter();
+
+  // The lock overlay is position:'absolute', so it contributes no height and
+  // the container would otherwise size to the wrapped child alone. Where the
+  // child is shorter than the overlay the Unlock button ended up outside the
+  // container's bounds — clipped by overflow:'hidden' AND undeliverable, since
+  // neither iOS nor Android dispatches touches to a subview outside its
+  // parent's bounds. Measuring the overlay's own natural height and applying it
+  // as the container's minHeight makes the container as tall as whichever is
+  // taller, child or overlay, with no call site passing a height and no child
+  // height hardcoded. Flexbox cannot express max() of two siblings, which is
+  // why this is measured rather than declared.
+  const [lockHeight, setLockHeight] = useState(0);
+
+  const onLockLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    // Ignore sub-pixel churn, or this re-renders forever.
+    setLockHeight((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+  }, []);
 
   // Still checking — show children with spinner overlay
   if (status === 'loading') {
@@ -39,8 +64,26 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
     router.push('/paywall?mode=upgrade');
   };
 
+  // Single definition so both platform branches measure the same thing.
+  const lockBody = (
+    <View style={styles.lockContent} onLayout={onLockLayout}>
+      <Heading level={3}>Unlock {feature ?? 'this feature'}</Heading>
+      <BodyText variant="secondary">
+        Upgrade to JawEase Premium for full access.
+      </BodyText>
+      <Button
+        title="Unlock"
+        onPress={handleUnlock}
+        variant="accent"
+        size="md"
+      />
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, lockHeight > 0 && { minHeight: lockHeight }]}
+    >
       {/* Render children behind blur */}
       <View style={styles.content}>{children}</View>
 
@@ -52,18 +95,7 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
             tint={scheme === 'dark' ? 'dark' : 'light'}
             style={styles.blur}
           >
-            <View style={styles.lockContent}>
-              <Heading level={3}>Unlock {feature ?? 'this feature'}</Heading>
-              <BodyText variant="secondary">
-                Upgrade to JawEase Premium for full access.
-              </BodyText>
-              <Button
-                title="Unlock"
-                onPress={handleUnlock}
-                variant="accent"
-                size="md"
-              />
-            </View>
+            {lockBody}
           </BlurView>
         ) : (
           <View
@@ -72,18 +104,7 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
               { backgroundColor: theme.background + 'E6' },
             ]}
           >
-            <View style={styles.lockContent}>
-              <Heading level={3}>Unlock {feature ?? 'this feature'}</Heading>
-              <BodyText variant="secondary">
-                Upgrade to JawEase Premium for full access.
-              </BodyText>
-              <Button
-                title="Unlock"
-                onPress={handleUnlock}
-                variant="accent"
-                size="md"
-              />
-            </View>
+            {lockBody}
           </View>
         )}
       </Pressable>
@@ -92,6 +113,11 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
 }
 
 const styles = StyleSheet.create({
+  // overflow:'hidden' is retained deliberately. The container has no
+  // borderRadius and the BlurView is bounded by the absolutely-positioned
+  // overlay, so it clips nothing in the steady state — but on the first frame,
+  // before onLayout has reported, it stops the oversized overlay spilling onto
+  // neighbouring UI. minHeight below is what actually fixes the bounds.
   container: { position: 'relative', overflow: 'hidden' },
   content: { opacity: 0.3 },
   overlay: {
