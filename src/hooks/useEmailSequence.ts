@@ -61,7 +61,9 @@ async function runSequence(
   }
 
   // ── Day 3: Trial expiry warning ──
-  if (daysSince >= 3 && (status === 'expired' || status === 'preview')) {
+  // 'free' only, never 'error': an SDK that failed to initialise means a
+  // broken install, not a prospect to upsell.
+  if (daysSince >= 3 && (status === 'expired' || status === 'free')) {
     const sent = await AsyncStorage.getItem(KEYS.trialExpiry);
     if (!sent) {
       await sendTrialExpiryEmail(email);
@@ -70,7 +72,8 @@ async function runSequence(
   }
 
   // ── Day 7+: Win-back ──
-  if (daysSince >= 7 && (status === 'expired' || status === 'preview')) {
+  // 'free' only, never 'error' — same reasoning as the day-3 sequence.
+  if (daysSince >= 7 && (status === 'expired' || status === 'free')) {
     const sent = await AsyncStorage.getItem(KEYS.winBack);
     if (!sent) {
       await sendWinBackEmail(email);

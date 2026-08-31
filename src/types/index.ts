@@ -21,8 +21,10 @@ export type SubscriptionStatus =
   | 'trial'
   | 'active'
   | 'expired'
-  | 'preview'
+  // SDK healthy, user simply has no active entitlement.
   | 'free'
+  // SDK could not initialise or fetch. NOT a prospect — a broken install.
+  | 'error'
   | 'premium';
 
 export type Difficulty = 'easy' | 'moderate' | 'challenging';

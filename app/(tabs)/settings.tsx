@@ -336,7 +336,9 @@ function StatusBadge({ status }: { status: string }) {
     premium: S.statusPremium,
     active: S.statusActive,
     expired: S.statusExpired,
-    preview: S.statusPreview,
+    // Keyed on 'error' since the enum split. Copy deliberately left as-is —
+    // wording is Dan's call.
+    error: S.statusPreview,
     loading: S.statusLoading,
   };
 
@@ -346,7 +348,7 @@ function StatusBadge({ status }: { status: string }) {
     premium: theme.success,
     active: theme.success,
     expired: theme.error,
-    preview: theme.textMuted,
+    error: theme.textMuted,
     loading: theme.textMuted,
   };
 

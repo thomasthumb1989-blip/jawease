@@ -11,7 +11,8 @@ import type { SubscriptionStatus } from '@/src/types';
 // ─── Helpers ─────────────────────────────────────────────
 function statusFromCustomerInfo(info: CustomerInfo): SubscriptionStatus {
   const pro = info.entitlements.active['pro'];
-  if (!pro) return 'preview';
+  // No entitlement, but the SDK answered — an ordinary non-paying user.
+  if (!pro) return 'free';
   // isActive covers trial + paid
   if (pro.periodType === 'TRIAL') return 'trial';
   if (pro.isActive) return 'active';
@@ -70,7 +71,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       default: '',
     }) as string;
 
-    // Guard: no key → preview mode (never crash)
+    // Guard: no key → error state (never crash)
     if (!apiKey) {
       // Web-only: allow localStorage override for dev/screenshots
       if (Platform.OS === 'web') {
@@ -86,7 +87,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         } catch { /* ignore */ }
       }
       if (mounted.current) {
-        setStatus('preview');
+        // No API key at build time — RevenueCat was never configured. This is
+        // a broken install, not a non-paying user.
+        setStatus('error');
         setLoading(false);
       }
       return;
@@ -110,8 +113,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setOfferings({ ...offerings, current: offering });
     } catch (e: unknown) {
       if (!mounted.current) return;
-      // RevenueCat failed → app still works in preview mode
-      setStatus('preview');
+      // configure/getCustomerInfo/getOfferings threw — SDK failure, not a
+      // non-paying user.
+      setStatus('error');
       setError(e instanceof Error ? e.message : 'RevenueCat init failed');
     } finally {
       if (mounted.current) setLoading(false);
