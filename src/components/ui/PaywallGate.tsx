@@ -36,7 +36,7 @@ export function PaywallGate({ children, feature }: PaywallGateProps) {
   }
 
   const handleUnlock = () => {
-    router.push('/onboarding/paywall');
+    router.push('/paywall?mode=upgrade');
   };
 
   return (

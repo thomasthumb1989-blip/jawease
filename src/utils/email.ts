@@ -109,7 +109,7 @@ export async function sendTrialExpiryEmail(email: string): Promise<boolean> {
          <li>Doctor-ready reports</li>
        </ul>
        <p>Don't lose your progress!</p>`,
-      { label: 'Upgrade Now', url: 'jawease://onboarding/paywall' },
+      { label: 'Upgrade Now', url: 'jawease://paywall?mode=upgrade' },
     ),
   );
 }

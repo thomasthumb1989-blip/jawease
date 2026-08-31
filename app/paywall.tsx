@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,7 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -71,8 +71,31 @@ export default function PaywallScreen() {
   const router = useRouter();
   const theme = useTheme();
   const { completeOnboarding } = useOnboarding();
-  const { profile } = useUserContext();
+  const { profile, onboardingComplete } = useUserContext();
   const { offerings, purchase, restore, loading: subLoading } = useSubscription();
+  const params = useLocalSearchParams<{ mode?: string | string[] }>();
+
+  // ── Mode ──
+  // useLocalSearchParams returns string | string[] | undefined — never a
+  // narrowed union. Normalise defensively: only the literal 'onboarding'
+  // opts in; everything else (undefined, unknown strings, arrays) is
+  // 'upgrade'. A returning user can never re-run onboarding completion.
+  const mode: 'onboarding' | 'upgrade' = useMemo(() => {
+    const raw = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+    if (raw !== 'onboarding') return 'upgrade';
+    return onboardingComplete ? 'upgrade' : 'onboarding';
+  }, [params.mode, onboardingComplete]);
+
+  // Upgrade-mode exit. /paywall is a top-level route, so it can be reached
+  // with an empty history stack (deep link, cold start). router.back() on an
+  // empty stack is a no-op, so fall back to the tabs.
+  const dismiss = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [router]);
 
   const [selectedIdx, setSelectedIdx] = useState(1); // default annual
   const [purchasing, setPurchasing] = useState(false);
@@ -113,11 +136,24 @@ export default function PaywallScreen() {
           return;
         }
         trackEvent('paywall_purchased', { package: pkg.identifier });
+      } else if (mode === 'upgrade') {
+        // No offerings to buy. In upgrade mode this is a no-op — never grant
+        // entry and never navigate. (Onboarding mode keeps its original
+        // fall-through below.)
+        setPurchasing(false);
+        return;
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      await completeOnboarding();
-      router.replace('/(tabs)');
+
+      if (mode === 'onboarding') {
+        // completeOnboarding() writes to AsyncStorage — must settle before
+        // navigating, or the root guard can fire on stale state.
+        await completeOnboarding();
+        router.replace('/(tabs)');
+      } else {
+        dismiss();
+      }
     } catch {
       setErrorMsg(Strings.onboarding.paywallError);
       setPurchasing(false);
@@ -131,8 +167,12 @@ export default function PaywallScreen() {
       const success = await restore();
       if (success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await completeOnboarding();
-        router.replace('/(tabs)');
+        if (mode === 'onboarding') {
+          await completeOnboarding();
+          router.replace('/(tabs)');
+        } else {
+          dismiss();
+        }
       } else {
         setErrorMsg(Strings.onboarding.paywallRestoreNone);
       }
@@ -145,8 +185,12 @@ export default function PaywallScreen() {
 
   const handleDismiss = async () => {
     trackEvent('paywall_dismissed');
-    await completeOnboarding();
-    router.replace('/(tabs)');
+    if (mode === 'onboarding') {
+      await completeOnboarding();
+      router.replace('/(tabs)');
+      return;
+    }
+    dismiss();
   };
 
   // ── Render plan card (RevenueCat or fallback) ──

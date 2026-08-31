@@ -254,7 +254,7 @@ export default function ExerciseFlowScreen() {
   // ── Handlers ──────────────────────────────────────────────────────
   const handleBegin = () => {
     if (!isPremium) {
-      router.push('/onboarding/paywall');
+      router.push('/paywall?mode=upgrade');
       return;
     }
     trackEvent('exercise_started', { count: routine.length });

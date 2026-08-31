@@ -660,7 +660,7 @@ export default function SettingsScreen() {
               <View style={styles.upgradeBlock}>
                 <Button
                   title={S.upgradeToPro}
-                  onPress={() => router.push('/onboarding/paywall')}
+                  onPress={() => router.push('/paywall?mode=upgrade')}
                   variant="accent"
                 />
               </View>

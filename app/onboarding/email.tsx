@@ -35,13 +35,13 @@ export default function EmailScreen() {
     // Fire-and-forget email capture
     submit(email).catch(() => {});
 
-    router.push('/onboarding/paywall');
+    router.push('/paywall?mode=onboarding');
   };
 
   // Skip: never save or submit an email — always available regardless of input.
   const handleSkip = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/onboarding/paywall');
+    router.push('/paywall?mode=onboarding');
   };
 
   return (

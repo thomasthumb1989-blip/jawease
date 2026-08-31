@@ -60,6 +60,15 @@ function RootNavigator() {
     if (loading) return;
 
     const inOnboarding = segments[0] === 'onboarding';
+    const isPaywall = segments[0] === 'paywall';
+
+    // /paywall is a top-level route valid in BOTH modes — during onboarding
+    // and after it. Neither branch below may redirect it. Splash is still
+    // hidden here, or a cold start straight to /paywall would hang on it.
+    if (isPaywall) {
+      SplashScreen.hideAsync();
+      return;
+    }
 
     if (!onboardingComplete && !inOnboarding) {
       router.replace('/onboarding');
@@ -84,6 +93,10 @@ function RootNavigator() {
       <Stack.Screen
         name="pain-log"
         options={{ presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="paywall"
+        options={{ headerShown: false }}
       />
       <Stack.Screen name="sources" />
     </Stack>
